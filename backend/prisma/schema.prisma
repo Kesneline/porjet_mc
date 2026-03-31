@@ -1,0 +1,225 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ------------------------------------------------------
+// ENUMS
+// ------------------------------------------------------
+
+enum Role {
+  STUDENT
+  STUDENT_PREMIUM
+  OWNER
+  MODERATOR
+  ADMIN
+}
+
+enum ListingType {
+  STUDIO
+  CHAMBRE
+  APPARTEMENT
+  COLOCATION
+}
+
+enum ListingStatus {
+  PENDING
+  ACTIVE
+  REPORTED
+  RENTED
+  ARCHIVED
+}
+
+enum PaymentOperator {
+  MTN_MOMO
+  ORANGE_MONEY
+}
+
+enum PaymentStatus {
+  PENDING
+  SUCCESSFUL
+  FAILED
+  EXPIRED
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWING
+  RESOLVED
+  DISMISSED
+}
+
+// ------------------------------------------------------
+// MODELS
+// ------------------------------------------------------
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique
+  password        String
+  name            String
+  role            Role           @default(STUDENT)
+  university      String?
+  phone           String?
+  avatar          String?
+  trustScore      Float          @default(0)
+  isVerified      Boolean        @default(false)
+  isPremium       Boolean        @default(false)
+  premiumUntil    DateTime?
+  refreshToken    String?
+
+  listings        Listing[]
+  reviews         Review[]
+  sentMessages    Message[]      @relation("SentMessages")
+  conversations   Participant[]
+  reports         Report[]
+  payments        Payment[]
+  vouchings       Vouching[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Listing {
+  id              String         @id @default(uuid())
+  title           String
+  description     String         @db.Text
+  price           Float
+  address         String
+  city            String
+  latitude        Float
+  longitude       Float
+  rooms           Int            @default(1)
+  type            ListingType
+  amenities       String[]
+  photos          String[]
+  status          ListingStatus  @default(PENDING)
+  trustScore      Float          @default(0)
+  campusDist      Float?
+  campusName      String?
+  algoliaId       String?
+
+  ownerId         String
+  owner           User           @relation(fields: [ownerId], references: [id])
+
+  reviews         Review[]
+  reports         Report[]
+  vouchings       Vouching[]
+
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Review {
+  id              String         @id @default(uuid())
+  rating          Float          
+  comment         String         @db.Text
+  verified        Boolean        @default(false)
+  
+  listingId       String
+  listing         Listing        @relation(fields: [listingId], references: [id])
+  
+  authorId        String
+  author          User           @relation(fields: [authorId], references: [id])
+  
+  createdAt       DateTime       @default(now())
+
+  @@unique([listingId, authorId])
+}
+
+model Conversation {
+  id              String         @id @default(uuid())
+  
+  messages        Message[]
+  participants    Participant[]
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Participant {
+  id              String         @id @default(uuid())
+  
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  
+  conversationId  String
+  conversation    Conversation   @relation(fields: [conversationId], references: [id])
+
+  @@unique([userId, conversationId])
+}
+
+model Message {
+  id              String         @id @default(uuid())
+  content         String         @db.Text
+  isBlocked       Boolean        @default(false)
+  
+  senderId        String
+  sender          User           @relation("SentMessages", fields: [senderId], references: [id])
+  
+  conversationId  String
+  conversation    Conversation   @relation(fields: [conversationId], references: [id])
+  
+  createdAt       DateTime       @default(now())
+}
+
+model Report {
+  id              String         @id @default(uuid())
+  reason          String         @db.Text
+  status          ReportStatus   @default(PENDING)
+  adminNote       String?        @db.Text
+
+  listingId       String
+  listing         Listing        @relation(fields: [listingId], references: [id])
+  
+  reporterId      String
+  reporter        User           @relation(fields: [reporterId], references: [id])
+  
+  createdAt       DateTime       @default(now())
+}
+
+model Vouching {
+  id              String         @id @default(uuid())
+  
+  listingId       String
+  listing         Listing        @relation(fields: [listingId], references: [id])
+  
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  
+  comment         String?
+  
+  createdAt       DateTime       @default(now())
+
+  @@unique([listingId, userId])
+}
+
+model Payment {
+  id              String         @id @default(uuid())
+  amount          Float
+  currency        String         @default("XAF")
+  operator        PaymentOperator
+  referenceId     String         @unique
+  status          PaymentStatus  @default(PENDING)
+  offerType       String
+  
+  userId          String
+  user            User           @relation(fields: [userId], references: [id])
+  
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model RefreshToken {
+  id              String         @id @default(uuid())
+  token           String         @unique
+  userId          String
+  expiresAt       DateTime
+  
+  createdAt       DateTime       @default(now())
+}
