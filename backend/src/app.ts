@@ -23,8 +23,8 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { successResponse } from './utils/response.formatter';
-import authRoutes from './routes/auth.routes';
-import listingRoutes from './routes/listing.routes';
+import authRoutes from './modules/auth/auth.routes';
+import listingRoutes from './modules/listing/listing.routes';
 import { globalErrorHandler } from './middlewares/error.middleware';
 
 const app: Application = express();

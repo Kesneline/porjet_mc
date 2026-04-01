@@ -14,11 +14,14 @@
  * - Le mot de passe hashé n'est JAMAIS retourné au client
  * - Le Refresh Token est opaque (UUID), stocké en DB et révocable
  */
-import { prisma } from '../config/prisma.config';
+import { prisma } from '../../config/prisma.config';
 import bcrypt from 'bcryptjs';
-import { generateAccessToken, generateRefreshToken } from '../utils/jwt.utils';
-import { AppError } from '../middlewares/error.middleware';
-import { RegisterInput, LoginInput, RefreshInput } from '../validators/auth.validator';
+import { RegisterInput, LoginInput, RefreshInput } from './auth.validator';
+import { 
+  generateAccessToken, 
+  generateRefreshToken 
+} from '../../utils/jwt.utils';
+import { AppError } from '../../middlewares/error.middleware';
 
 export class AuthService {
 

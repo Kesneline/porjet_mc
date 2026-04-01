@@ -3,10 +3,10 @@
  * @description Handlers pour les requêtes HTTP liées aux logements.
  */
 import { Request, Response, NextFunction } from 'express';
-import { ListingService } from '../services/listing.service';
-import { CreateListingSchema, UpdateListingSchema } from '../validators/listing.validator';
-import { successResponse } from '../utils/response.formatter';
-import { AppError } from '../middlewares/error.middleware';
+import { ListingService } from './listing.service';
+import { CreateListingSchema, UpdateListingSchema } from './listing.validator';
+import { successResponse } from '../../utils/response.formatter';
+import { AppError } from '../../middlewares/error.middleware';
 
 /**
  * GET /api/listings

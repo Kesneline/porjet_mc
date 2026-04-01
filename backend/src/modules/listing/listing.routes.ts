@@ -3,9 +3,9 @@
  * @description Définition des points d'accès (endpoints) pour le module Logements.
  */
 import { Router } from 'express';
-import * as ListingController from '../controllers/listing.controller';
-import { requireAuth, requireRole } from '../middlewares/auth.middleware';
-import { upload } from '../middlewares/upload.middleware';
+import * as ListingController from './listing.controller';
+import { requireAuth, requireRole } from '../../middlewares/auth.middleware';
+import { upload } from '../../middlewares/upload.middleware';
 
 const router = Router();
 

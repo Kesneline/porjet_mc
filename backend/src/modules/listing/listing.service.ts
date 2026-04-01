@@ -2,10 +2,10 @@
  * @file listing.service.ts
  * @description Logique métier pour la gestion des annonces de logements.
  */
-import { prisma } from '../config/prisma.config';
-import cloudinary from '../config/cloudinary.config';
-import { CreateListingInput, UpdateListingInput } from '../types/listing.dto';
-import { AppError } from '../middlewares/error.middleware';
+import { prisma } from '../../config/prisma.config';
+import cloudinary from '../../config/cloudinary.config';
+import { CreateListingInput, UpdateListingInput } from './listing.dto';
+import { AppError } from '../../middlewares/error.middleware';
 
 export class ListingService {
 
