@@ -8,12 +8,18 @@
 - [x] **Étape 2 :** Modèles (Prisma) & Connexion Supabase (Port 6543)
 - [x] **Étape 2.2 :** Synchronisation d'équipe (Dossier `/backend` sur Git)
 - [x] **Étape 3 :** Authentification & Sécurité (JWT Multi-rôles, Zod)
-- [⚙️] **Étape 4 :** Gestion Logements (CRUD, Cloudinary)
-- [ ] **Étape 5 :** Recherche & Filtrage (Algolia)
+- [x] **Étape 4 :** Gestion Logements (CRUD, Cloudinary) - **SUCCÈS !**
+- [⚙️] **Étape 5 :** Recherche & Filtrage (Algolia)
 - [ ] **Étape 6 :** Confiance (Avis, Signalements, TrustScore)
 - [ ] **Étape 7 :** Trésorerie (Mobile Money)
 - [ ] **Étape 8 :** Intelligence Artificielle (Claude API)
 - [ ] **Étape 9 :** Notifications Firebase (FCM) & Analytics
+
+### 🚀 Défis résolus récemment
+- [x] Correction de la signature JWT (HS256 Secret Match)
+- [x] Support des uploads d'images multipart/form-data via Multer
+- [x] Intégration Cloudinary (Gestion du décalage d'horloge système)
+- [x] Nettoyage automatique des clés de formulaire (Trim body keys)
 
 ## 🏗️ Architecture Actuelle
 - **Dossier de travail :** `/backend`

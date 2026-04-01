@@ -26,20 +26,25 @@ const EnvSchema = z.object({
   NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
 
   // Base de données Supabase (Obligatoires en production)
-  DATABASE_URL: z.string({ required_error: '❌ DATABASE_URL est manquante dans le fichier .env !' }),
-  DIRECT_URL: z.string({ required_error: '❌ DIRECT_URL est manquante dans le fichier .env !' }),
+  DATABASE_URL: z.string({ required_error: 'DATABASE_URL est manquante dans le fichier .env !' }),
+  DIRECT_URL: z.string({ required_error: 'DIRECT_URL est manquante dans le fichier .env !' }),
 
   // JWT (Optionnels : un fallback est utilisé en développement si absent)
   JWT_PRIVATE_KEY: z.string().optional(),
   JWT_PUBLIC_KEY: z.string().optional(),
   JWT_ACCESS_EXPIRES: z.string().default('15m'),
+
+  // Cloudinary (Obligatoires pour l'étape 4)
+  CLOUD_NAME: z.string({ required_error: 'CLOUD_NAME est manquante dans le .env' }),
+  API_KEY: z.string({ required_error: 'API_KEY Cloudinary est manquante dans le .env' }),
+  API_SECRET: z.string({ required_error: 'API_SECRET Cloudinary est manquante dans le .env' }),
 });
 
 // Validation au démarrage : si une variable obligatoire est absente, on crash proprement
 const parsedEnv = EnvSchema.safeParse(process.env);
 
 if (!parsedEnv.success) {
-  console.error('❌ Configuration invalide des variables d\'environnement :');
+  console.error('Configuration invalide des variables d\'environnement :');
   console.error(parsedEnv.error.flatten().fieldErrors);
   // On arrête le processus proprement pour signaler l'erreur de config
   process.exit(1);
@@ -57,4 +62,11 @@ export const config = {
 
   /** Durée de validité des Access Tokens JWT. Défaut : 15 minutes. */
   jwtAccessExpires: env.JWT_ACCESS_EXPIRES,
+
+  /** Configuration Cloudinary */
+  cloudinary: {
+    cloudName: env.CLOUD_NAME,
+    apiKey: env.API_KEY,
+    apiSecret: env.API_SECRET,
+  }
 };

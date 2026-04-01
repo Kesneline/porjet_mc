@@ -52,11 +52,8 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction): vo
 
     // Injecte les données de l'utilisateur dans l'objet Request pour les controllers
     req.user = decoded;
-
-    // Passe la main au prochain middleware ou controller
     next();
   } catch (error) {
-    // Capture toute erreur JWT (token expiré, signature invalide, malformé, etc.)
     res.status(401).json(errorResponse('Token JWT invalide ou expiré. Refaites /api/auth/login.'));
   }
 };
