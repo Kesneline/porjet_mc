@@ -36,9 +36,7 @@ function InnerLayout() {
         <>
             {showSplash && <AppSplashScreen />}
             <Stack screenOptions={{ headerShown: false }}>
-                <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
-                <Stack.Screen name="onboarding-secure" options={{ animation: "slide_from_right" }} />
-                <Stack.Screen name="onboarding-welcome" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="index" options={{ headerShown: false }} />
                 <Stack.Screen name="(tabs)" />
                 <Stack.Screen name="+not-found" />
             </Stack>
