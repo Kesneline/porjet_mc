@@ -1,4 +1,4 @@
-import {
+﻿import {
     DarkTheme,
     DefaultTheme,
     ThemeProvider,
@@ -6,19 +6,21 @@ import {
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import "react-native-reanimated";
 import "./global.css";
 
 import { useColorScheme } from "@/hooks/useColorScheme";
+import AppSplashScreen from "@/components/SplashScreen";
 
-// Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 function InnerLayout() {
     const [loaded] = useFonts({
         SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
     });
+
+    const [showSplash, setShowSplash] = useState(true);
 
     useEffect(() => {
         if (loaded) {
@@ -31,10 +33,16 @@ function InnerLayout() {
     }
 
     return (
-        <Stack>
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="+not-found" />
-        </Stack>
+        <>
+            {showSplash && <AppSplashScreen />}
+            <Stack screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="onboarding" options={{ animation: "fade" }} />
+                <Stack.Screen name="onboarding-secure" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="onboarding-welcome" options={{ animation: "slide_from_right" }} />
+                <Stack.Screen name="(tabs)" />
+                <Stack.Screen name="+not-found" />
+            </Stack>
+        </>
     );
 }
 
