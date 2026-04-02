@@ -7,15 +7,18 @@ import {
   Animated,
   Easing,
 } from "react-native";
-import { useRouter } from "expo-router";
+
 
 const { width, height } = Dimensions.get("window");
 
 const SPLASH_DURATION = 3000;
 const FADE_DURATION = 500;
 
-export default function SplashScreen() {
-  const router = useRouter();
+interface SplashScreenProps {
+  onFinish?: () => void;
+}
+
+export default function SplashScreen({ onFinish }: SplashScreenProps) {
   const opacityValue = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
@@ -26,7 +29,7 @@ export default function SplashScreen() {
         easing: Easing.out(Easing.ease),
         useNativeDriver: true,
       }).start(() => {
-        router.replace("/");
+        onFinish?.();
       });
     }, SPLASH_DURATION);
 
