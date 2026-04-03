@@ -13,6 +13,7 @@
  *   l'erreur est capturée et process.exit(1) est appelé pour stopper
  *   proprement le processus et alerter le gestionnaire de processus (PM2, Docker).
  */
+import './config/env.config'; // Doit être importé en premier pour charger .env
 import app from './app';
 import { config } from './config/env.config';
 

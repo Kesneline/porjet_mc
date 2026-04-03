@@ -23,26 +23,26 @@ router.get('/:id', ListingController.getById);
 // Création : Authentification requise + Rôle OWNER ou ADMIN
 // On utilise upload.array('photos', 5) pour limiter à 5 photos
 router.post(
-  '/', 
-  requireAuth, 
-  requireRole(['OWNER', 'ADMIN']), 
-  upload.array('photos', 5), 
+  '/',
+  requireAuth,
+  requireRole(['OWNER', 'ADMIN']),
+  upload.array('photos', 5),
   ListingController.create
 );
 
 // Mise à jour : Filtré par propriété du logement à l'intérieur du controller
 router.patch(
-  '/:id', 
-  requireAuth, 
-  requireRole(['OWNER', 'ADMIN']), 
+  '/:id',
+  requireAuth,
+  requireRole(['OWNER', 'ADMIN']),
   upload.none(), // Pas de nouvelles photos gérées via patch pour l'instant (JSON ou simple Text)
   ListingController.update
 );
 
 // Suppression
 router.delete(
-  '/:id', 
-  requireAuth, 
+  '/:id',
+  requireAuth,
   ListingController.remove
 );
 
