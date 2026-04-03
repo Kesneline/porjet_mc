@@ -17,9 +17,10 @@
  *  POST /api/auth/login    → handler: login
  */
 import { Request, Response, NextFunction } from 'express';
-import { AuthService } from '../services/auth.service';
-import { RegisterSchema, LoginSchema, RefreshSchema } from '../validators/auth.validator';
-import { successResponse } from '../utils/response.formatter';
+import { AuthService } from './auth.service';
+import { RegisterSchema, LoginSchema, RefreshSchema } from './auth.validator';
+import { successResponse } from '../../utils/response.formatter';
+import { AppError } from '../../middlewares/error.middleware';
 
 /**
  * Handler POST /api/auth/register

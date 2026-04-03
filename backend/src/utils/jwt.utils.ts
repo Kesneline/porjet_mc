@@ -19,10 +19,11 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 
-// Clés lues depuis les variables d'environnement. En production, ce seront
-// des clés RSA multilignes encodées en Base64 ou injectées par le serveur.
-const PRIVATE_KEY = process.env.JWT_PRIVATE_KEY || 'CLE_PRIVEE_SECRET_STUDHOUSING';
-const PUBLIC_KEY = process.env.JWT_PUBLIC_KEY || 'CLE_PUBLIQUE_SECRET_STUDHOUSING';
+// Clés lues depuis les variables d'environnement.
+// En mode DÉVELOPPEMENT (sans clés RSA), on utilise le même secret pour la signature et la vérification (HS256).
+const JWT_SECRET_FALLBACK = 'CLE_SECRET_STUDHOUSING_DEV_MODE_UNIC';
+const PRIVATE_KEY = (process.env.JWT_PRIVATE_KEY || JWT_SECRET_FALLBACK).trim().replace(/\\n/g, '\n');
+const PUBLIC_KEY = (process.env.JWT_PUBLIC_KEY || JWT_SECRET_FALLBACK).trim().replace(/\\n/g, '\n');
 
 /**
  * Structure d'un payload décodé depuis un Access Token JWT.

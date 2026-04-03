@@ -23,7 +23,9 @@ import express, { Application, Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import { successResponse } from './utils/response.formatter';
-import authRoutes from './routes/auth.routes';
+import authRoutes from './modules/auth/auth.routes';
+import listingRoutes from './modules/listing/listing.routes';
+import userRoutes from './modules/user/user.routes';
 import { globalErrorHandler } from './middlewares/error.middleware';
 
 const app: Application = express();
@@ -48,6 +50,8 @@ app.use(express.json());
 // ===================================================================
 
 app.use('/api/auth', authRoutes); // POST /api/auth/register, POST /api/auth/login
+app.use('/api/listings', listingRoutes); // CRUD public et propriétaire des logements
+app.use('/api/users', userRoutes); // Profils utilisateurs
 
 // ===================================================================
 // ROUTES SYSTÈME
