@@ -35,6 +35,13 @@ enum ListingStatus {
   ARCHIVED
 }
 
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
 enum PaymentOperator {
   MTN_MOMO
   ORANGE_MONEY
@@ -69,6 +76,7 @@ model User {
   avatar          String?
   trustScore      Float          @default(0)
   isVerified      Boolean        @default(false)
+  status          UserStatus     @default(PENDING)
   isPremium       Boolean        @default(false)
   premiumUntil    DateTime?
 

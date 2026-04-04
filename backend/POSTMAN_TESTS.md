@@ -53,10 +53,18 @@ Utilisez ces informations pour tester les nouvelles fonctionnalités du module *
 
 ---
 
-## 5. Gestion des Erreurs (Audit)
+## 5. Administration (Admin uniquement)
+- **Prérequis** : Votre utilisateur doit avoir `role: "ADMIN"` en base de données.
+- **URL Liste Users** : `GET /api/admin/users`
+- **URL Vérifier User** : `PATCH /api/admin/users/<ID_USER>/verify`
+- **URL Changer Rôle** : `PATCH /api/admin/users/<ID_USER>/role` (Body: `{"role": "OWNER"}`)
+
+---
+
+## 6. Gestion des Erreurs (Audit)
 - Essayez d'envoyer un mot de passe trop court (< 8 caractères).
 - Essayez d'envoyer un nom de 1 seul caractère.
 - Essayez d'accéder à `/me` sans le token Authorization.
 
 ---
-*Le serveur redémarre automatiquement à chaque modification via `ts-node-dev`.* 🏗️⚓🚀
+*Le serveur redémarre automatiquement à chaque modification via `ts-node-dev`.*
