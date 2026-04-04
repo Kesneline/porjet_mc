@@ -19,6 +19,8 @@
  * /api/listings/*    → Annonces CRUD + filtres (US1.3, US1.4, US2.1)
  * /api/search        → Recherche Algolia full-text (US2.4)
  * /api/payments/*    → Paiement Mobile Money MTN/Orange (US4.3, US4.4)
+ * /api/matching      → Matching IA personnalisé (US4.1)
+ * /api/conversations → Messagerie sécurisée (US2.3)
  * [404 catch-all]    → Route non définie → JSON 404
  * [globalErrorHandler] → Gestionnaire centralisé de toutes les erreurs → JSON formaté
  */
@@ -31,6 +33,8 @@ import listingRoutes from './modules/listing/listing.routes';
 import userRoutes from './modules/user/user.routes';
 import searchRoutes from './modules/search/search.routes';
 import paymentRoutes from './modules/payment/payment.routes';
+import matchingRoutes from './modules/matching/matching.routes';
+import messagingRoutes from './modules/messaging/messaging.routes';
 import { globalErrorHandler } from './middlewares/error.middleware';
 
 const app: Application = express();
@@ -57,8 +61,10 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);         // POST /api/auth/register, POST /api/auth/login
 app.use('/api/listings', listingRoutes);  // CRUD + filtres US1.3/US1.4/US2.1
 app.use('/api/users', userRoutes);        // Profils utilisateurs
-app.use('/api/search', searchRoutes);     // US2.4 — Recherche full-text Algolia
-app.use('/api/payments', paymentRoutes);  // US4.3/US4.4 — MTN MoMo + Orange Money
+app.use('/api/search', searchRoutes);           // US2.4 — Recherche full-text Algolia
+app.use('/api/payments', paymentRoutes);        // US4.3/US4.4 — MTN MoMo + Orange Money
+app.use('/api/matching', matchingRoutes);       // US4.1 — Matching IA via Claude API
+app.use('/api/conversations', messagingRoutes); // US2.3 — Messagerie sécurisée
 
 // ===================================================================
 // ROUTES SYSTÈME

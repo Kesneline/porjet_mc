@@ -5,6 +5,7 @@
  * US1.3 — GET / avec filtres basiques (ville, type, prix) — route publique
  * US1.4 — POST / ouvert aux rôles STUDENT, STUDENT_PREMIUM, OWNER, ADMIN
  * US2.1 — GET / avec filtres avancés (équipements, distance campus) — route publique
+ * US2.2 — GET /map avec données géographiques pour carte interactive
  */
 import { Router } from 'express';
 import * as ListingController from './listing.controller';
@@ -20,6 +21,11 @@ const router = Router();
 
 // US1.3 + US2.1 — Liste avec filtres (ville, type, prix, équipements, campus...)
 router.get('/', ListingController.getAll);
+
+// US2.2 — Carte interactive : données géo légères pour markers
+// IMPORTANT : /map doit être AVANT /:id sinon Express traite "map" comme un :id
+router.get('/map', ListingController.getMapData);
+
 router.get('/:id', ListingController.getById);
 
 // ─────────────────────────────────────────────────────────────

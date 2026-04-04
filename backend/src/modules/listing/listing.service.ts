@@ -255,6 +255,74 @@ export class ListingService {
     return updated;
   }
 
+  /**
+   * US2.2 — Récupère les données géographiques de toutes les annonces actives
+   * pour l'affichage sur la carte interactive avec markers colorés.
+   *
+   * Retourne un payload léger (pas de description ni photos complètes)
+   * optimisé pour le rendu carte sur mobile (faible bande passante).
+   *
+   * Couleur des markers :
+   *   - green  : trustScore >= 3.5
+   *   - orange : trustScore >= 2.0
+   *   - red    : trustScore < 2.0
+   *   - gold   : annonce boostée (isBoosted)
+   */
+  static async getMapListings(city?: string) {
+    const where: Prisma.ListingWhereInput = {
+      status: 'ACTIVE',
+      latitude: { not: 0 },
+      longitude: { not: 0 },
+    };
+    if (city) {
+      where.city = { contains: city, mode: 'insensitive' };
+    }
+
+    const listings = await prisma.listing.findMany({
+      where,
+      select: {
+        id: true,
+        title: true,
+        price: true,
+        city: true,
+        latitude: true,
+        longitude: true,
+        type: true,
+        rooms: true,
+        trustScore: true,
+        isBoosted: true,
+        photos: true,
+        status: true,
+      },
+    });
+
+    // Ajout de la couleur du marker côté serveur pour simplifier le client
+    const markers = listings.map((l) => {
+      let markerColor: string;
+      if (l.isBoosted) markerColor = 'gold';
+      else if (l.trustScore >= 3.5) markerColor = 'green';
+      else if (l.trustScore >= 2.0) markerColor = 'orange';
+      else markerColor = 'red';
+
+      return {
+        id: l.id,
+        title: l.title,
+        price: l.price,
+        city: l.city,
+        latitude: l.latitude,
+        longitude: l.longitude,
+        type: l.type,
+        rooms: l.rooms,
+        trustScore: l.trustScore,
+        isBoosted: l.isBoosted,
+        thumbnail: l.photos[0] || null,
+        markerColor,
+      };
+    });
+
+    return { markers, total: markers.length };
+  }
+
   // ─────────────────────────────────────────────────────────────
   // HELPERS PRIVÉS
   // ─────────────────────────────────────────────────────────────

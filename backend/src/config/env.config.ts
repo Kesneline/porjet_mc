@@ -39,6 +39,9 @@ const EnvSchema = z.object({
   API_KEY: z.string({ required_error: 'API_KEY Cloudinary est manquante dans le .env' }),
   API_SECRET: z.string({ required_error: 'API_SECRET Cloudinary est manquante dans le .env' }),
 
+  // Claude API — Anthropic (US4.1 — matching IA, optionnel en développement)
+  ANTHROPIC_API_KEY: z.string().optional(),
+
   // Algolia Search (US2.4 — optionnels, dégradation gracieuse si absents)
   ALGOLIA_APP_ID: z.string().optional(),
   ALGOLIA_WRITE_API_KEY: z.string().optional(),
@@ -90,6 +93,9 @@ export const config = {
     apiKey: env.API_KEY,
     apiSecret: env.API_SECRET,
   },
+
+  /** Clé API Claude / Anthropic (US4.1) */
+  anthropicApiKey: env.ANTHROPIC_API_KEY,
 
   /** Configuration Algolia (US2.4) */
   algolia: {

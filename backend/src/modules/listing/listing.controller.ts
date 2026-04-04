@@ -5,6 +5,7 @@
  * US1.3 — getAll supporte les filtres basiques via query params (ville, type, prix)
  * US1.4 — create autorise les rôles STUDENT et OWNER (avec limite pour STUDENT)
  * US2.1 — getAll supporte les filtres avancés (équipements, distance campus, tri)
+ * US2.2 — getMapData retourne les données géographiques pour la carte interactive
  */
 import { Request, Response, NextFunction } from 'express';
 import { ListingService } from './listing.service';
@@ -119,6 +120,22 @@ export const update = async (req: Request, res: Response, next: NextFunction): P
     const validatedData = UpdateListingSchema.parse(rawData);
     const updatedListing = await ListingService.updateListing(id, userId, userRole, validatedData);
     res.status(200).json(successResponse('Annonce mise à jour avec succès', updatedListing));
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * GET /api/listings/map
+ * US2.2 — Données géographiques pour la carte interactive.
+ * Retourne un payload léger avec coordonnées, prix et couleur du marker.
+ * Query optionnel : ?city=Yaoundé
+ */
+export const getMapData = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const city = req.query.city as string | undefined;
+    const result = await ListingService.getMapListings(city);
+    res.status(200).json(successResponse('Données carte récupérées', result));
   } catch (err) {
     next(err);
   }
