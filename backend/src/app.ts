@@ -14,9 +14,12 @@
  * 3. express.json()   → Parse le body JSON des requêtes entrantes
  *
  * ARBRE DE ROUTES :
- * /api/health       → Healthcheck
- * /api/auth/*       → Module Authentification (register, login)
- * [404 catch-all]   → Route non définie → JSON 404
+ * /api/health        → Healthcheck
+ * /api/auth/*        → Module Authentification (register, login)
+ * /api/listings/*    → Annonces CRUD + filtres (US1.3, US1.4, US2.1)
+ * /api/search        → Recherche Algolia full-text (US2.4)
+ * /api/payments/*    → Paiement Mobile Money MTN/Orange (US4.3, US4.4)
+ * [404 catch-all]    → Route non définie → JSON 404
  * [globalErrorHandler] → Gestionnaire centralisé de toutes les erreurs → JSON formaté
  */
 import express, { Application, Request, Response } from 'express';
@@ -26,6 +29,8 @@ import { successResponse } from './utils/response.formatter';
 import authRoutes from './modules/auth/auth.routes';
 import listingRoutes from './modules/listing/listing.routes';
 import userRoutes from './modules/user/user.routes';
+import searchRoutes from './modules/search/search.routes';
+import paymentRoutes from './modules/payment/payment.routes';
 import { globalErrorHandler } from './middlewares/error.middleware';
 
 const app: Application = express();
@@ -49,9 +54,11 @@ app.use(express.json());
 // Chaque module a son propre fichier de routes, monté sur un préfixe.
 // ===================================================================
 
-app.use('/api/auth', authRoutes); // POST /api/auth/register, POST /api/auth/login
-app.use('/api/listings', listingRoutes); // CRUD public et propriétaire des logements
-app.use('/api/users', userRoutes); // Profils utilisateurs
+app.use('/api/auth', authRoutes);         // POST /api/auth/register, POST /api/auth/login
+app.use('/api/listings', listingRoutes);  // CRUD + filtres US1.3/US1.4/US2.1
+app.use('/api/users', userRoutes);        // Profils utilisateurs
+app.use('/api/search', searchRoutes);     // US2.4 — Recherche full-text Algolia
+app.use('/api/payments', paymentRoutes);  // US4.3/US4.4 — MTN MoMo + Orange Money
 
 // ===================================================================
 // ROUTES SYSTÈME

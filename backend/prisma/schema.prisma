@@ -103,6 +103,8 @@ model Listing {
   campusDist      Float?
   campusName      String?
   algoliaId       String?
+  isBoosted       Boolean        @default(false)
+  boostedUntil    DateTime?
 
   ownerId         String
   owner           User           @relation(fields: [ownerId], references: [id])
