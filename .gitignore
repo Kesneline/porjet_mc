@@ -1,0 +1,27 @@
+# Dépendances
+node_modules/
+
+# Variables d'environnement (clés API, secrets)
+.env
+.env.local
+.env.*.local
+
+# Build
+dist/
+build/
+
+# Clés et certificats
+*.pem
+*.key
+*.p12
+
+# Claude Code (état interne)
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/settings.json
+.idea/
