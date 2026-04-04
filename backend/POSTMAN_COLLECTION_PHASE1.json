@@ -1,0 +1,322 @@
+{
+  "info": {
+    "_postman_id": "studhousing-phase1-tests",
+    "name": "Stud'Housing Phase 1 - Security Tests",
+    "description": "Tests for Rate Limiting, CORS, XSS Prevention, and Input Limits",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Health Check",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "health"]
+        },
+        "description": "Test that API is running"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Auth Login - Attempt 1",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"Test123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "First login attempt (should return 401 invalid credentials)"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Auth Login - Attempt 2",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"Test123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Second login attempt"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Auth Login - Attempt 3",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"Test123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Third login attempt"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Auth Login - Attempt 4",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"Test123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Fourth login attempt"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Auth Login - Attempt 5",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"Test123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "Fifth login attempt"
+      },
+      "response": []
+    },
+    {
+      "name": "2. Auth Login - Attempt 6 (SHOULD BE RATE LIMITED)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"test@test.com\",\n  \"password\": \"Test123\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "login"]
+        },
+        "description": "EXPECTED: HTTP 429 (Too Many Requests) with Retry-After header"
+      },
+      "response": []
+    },
+    {
+      "name": "3. Register - Valid User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"valid@test.com\",\n  \"password\": \"Password123\",\n  \"name\": \"Valid User Name\",\n  \"university\": \"Test University\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "register"]
+        },
+        "description": "Register a valid user"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Register - XSS Attempt in Name",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"xss1@test.com\",\n  \"password\": \"Password123\",\n  \"name\": \"<script>alert('xss')</script>\",\n  \"university\": \"Test Uni\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "register"]
+        },
+        "description": "EXPECTED: Script tag should be sanitized/escaped in response and DB"
+      },
+      "response": []
+    },
+    {
+      "name": "4. Register - XSS Attempt in University",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"xss2@test.com\",\n  \"password\": \"Password123\",\n  \"name\": \"Test User\",\n  \"university\": \"<img src=x onerror=alert('xss')>\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "register"]
+        },
+        "description": "EXPECTED: IMG tag should be sanitized/escaped"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Register - Name Too Long (101 chars)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"longnametest@test.com\",\n  \"password\": \"Password123\",\n  \"name\": \"X1234567890X1234567890X1234567890X1234567890X1234567890X1234567890X1234567890X1234567890X12345X\",\n  \"university\": \"Test Uni\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "register"]
+        },
+        "description": "EXPECTED: HTTP 422 Validation Error - name exceeds 100 chars"
+      },
+      "response": []
+    },
+    {
+      "name": "5. Register - University Too Long (151 chars)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"longunitest@test.com\",\n  \"password\": \"Password123\",\n  \"name\": \"Test User\",\n  \"university\": \"U1234567890U1234567890U1234567890U1234567890U1234567890U1234567890U1234567890U1234567890U1234567890U1234567890U1234567890U1234567890U1234567890U1234567890U123456U\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/register",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "auth", "register"]
+        },
+        "description": "EXPECTED: HTTP 422 Validation Error - university exceeds 150 chars"
+      },
+      "response": []
+    },
+    {
+      "name": "6. CORS Test - Blocked Origin",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "https://evil-site.com"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/listings",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "listings"]
+        },
+        "description": "EXPECTED: CORS error or no Access-Control-Allow-Origin header"
+      },
+      "response": []
+    },
+    {
+      "name": "6. CORS Test - Allowed Origin",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Origin",
+            "value": "http://localhost:3000"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/listings",
+          "host": ["{{baseUrl}}"],
+          "path": ["api", "listings"]
+        },
+        "description": "EXPECTED: Success with Access-Control-Allow-Origin header"
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    }
+  ]
+}

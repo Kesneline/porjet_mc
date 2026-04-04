@@ -10,10 +10,12 @@
  * 1. On définit un schéma Zod (règles métier : format, longueur, etc.)
  * 2. On en extrait le type TypeScript (z.infer) — c'est la source de vérité unique
  * 3. On valide les données dans le controller AVANT de les passer au service
+ * 4. On sanitize les champs de texte libre (name, university, phone) via .transform()
  *
  * Cela remplace complètement les if(!email) manuels dans les controllers.
  */
 import { z } from 'zod';
+import { sanitizeString } from '../../utils/sanitize.utils';
 
 /**
  * Schéma de validation Zod pour l'inscription.
@@ -32,10 +34,21 @@ export const RegisterSchema = z.object({
 
   name: z
     .string({ required_error: "Le nom est obligatoire." })
-    .min(2, "Le nom doit contenir au moins 2 caractères."),
+    .min(2, "Le nom doit contenir au moins 2 caractères.")
+    .max(100, "Le nom ne peut pas dépasser 100 caractères.")
+    .transform(sanitizeString), // Sanitize contre XSS
 
-  university: z.string().optional(), // Champ optionnel
-  phone: z.string().optional(),      // Champ optionnel
+  university: z
+    .string()
+    .max(150, "L'université ne peut pas dépasser 150 caractères.")
+    .transform(sanitizeString) // Sanitize contre XSS
+    .optional(),
+
+  phone: z
+    .string()
+    .max(20, "Le téléphone ne peut pas dépasser 20 caractères.")
+    .transform(sanitizeString) // Sanitize contre XSS
+    .optional(),
 });
 
 /**

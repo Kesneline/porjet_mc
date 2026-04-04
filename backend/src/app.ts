@@ -10,8 +10,9 @@
  *
  * MIDDLEWARES GLOBAUX (ordre important) :
  * 1. helmet()         → Sécurise les headers HTTP
- * 2. cors()           → Autorise les requêtes cross-origin (app mobile)
- * 3. express.json()   → Parse le body JSON des requêtes entrantes
+ * 2. cors()           → Autorise les requêtes cross-origin (restreint aux origines connues)
+ * 3. globalApiLimiter → Rate limiting global (filet de sécurité)
+ * 4. express.json()   → Parse le body JSON des requêtes entrantes
  *
  * ARBRE DE ROUTES :
  * /api/health       → Healthcheck
@@ -26,7 +27,11 @@ import { successResponse } from './utils/response.formatter';
 import authRoutes from './modules/auth/auth.routes';
 import listingRoutes from './modules/listing/listing.routes';
 import userRoutes from './modules/user/user.routes';
+import adminRoutes from './modules/admin/admin.routes';
 import { globalErrorHandler } from './middlewares/error.middleware';
+import { globalApiLimiter } from './middlewares/rateLimit.middleware';
+import { correlationId } from './middlewares/correlationId.middleware';
+import { requestLogger } from './middlewares/requestLogger.middleware';
 
 const app: Application = express();
 
@@ -34,15 +39,36 @@ const app: Application = express();
 // MIDDLEWARES GLOBAUX DE SÉCURITÉ ET DE PARSING
 // ===================================================================
 
+// correlationId : Assigner un request ID unique à chaque requête
+// IMPORTANT: DOIT être EN PREMIER (avant tous les autres middlewares)
+app.use(correlationId);
+
 // helmet : Ajoute automatiquement des headers HTTP de sécurité (CSP, HSTS, etc.)
 app.use(helmet());
 
-// cors : Autorise les requêtes cross-origin (depuis l'app Flutter / React Native)
-// TODO Production : Restreindre aux origines connues via corsOptions
-app.use(cors());
+// cors : Autorise les requêtes cross-origin avec restrictions
+// En développement : accepte localhost:3000 et localhost:8080 (Flutter)
+// En production : accepter UNIQUEMENT l'origine de l'app (définie via env var ALLOWED_ORIGINS)
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : ['http://localhost:3000', 'http://localhost:8080', 'http://localhost:5000']; // Dev defaults
+
+app.use(
+  cors({
+    origin: allowedOrigins,
+    credentials: true,
+    optionsSuccessStatus: 200,
+  })
+);
+
+// Rate limiting global : filet de sécurité contre les requêtes en masse
+app.use('/api/', globalApiLimiter);
 
 // express.json : Parse le body des requêtes avec Content-Type: application/json
 app.use(express.json());
+
+// requestLogger : Log chaque requête HTTP (method, path, status, duration, userId)
+app.use(requestLogger);
 
 // ===================================================================
 // ROUTES DE L'API
@@ -52,6 +78,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes); // POST /api/auth/register, POST /api/auth/login
 app.use('/api/listings', listingRoutes); // CRUD public et propriétaire des logements
 app.use('/api/users', userRoutes); // Profils utilisateurs
+app.use('/api/admin', adminRoutes); // Actions de modération (Admin uniquement)
 
 // ===================================================================
 // ROUTES SYSTÈME
