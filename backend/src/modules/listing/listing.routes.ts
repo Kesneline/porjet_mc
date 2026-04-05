@@ -1,6 +1,11 @@
 /**
  * @file listing.routes.ts
  * @description Définition des points d'accès (endpoints) pour le module Logements.
+ *
+ * US1.3 — GET / avec filtres basiques (ville, type, prix) — route publique
+ * US1.4 — POST / ouvert aux rôles STUDENT, STUDENT_PREMIUM, OWNER, ADMIN
+ * US2.1 — GET / avec filtres avancés (équipements, distance campus) — route publique
+ * US2.2 — GET /map avec données géographiques pour carte interactive
  */
 import { Router } from 'express';
 import * as ListingController from './listing.controller';
@@ -9,41 +14,45 @@ import { upload } from '../../middlewares/upload.middleware';
 
 const router = Router();
 
-/**
- * --- ROUTES PUBLIQUES ---
- * Tout le monde (étudiants ou visiteurs) peut voir les annonces.
- */
+// ─────────────────────────────────────────────────────────────
+// ROUTES PUBLIQUES
+// Tout le monde (étudiant non connecté ou visiteur) peut lire.
+// ─────────────────────────────────────────────────────────────
+
+// US1.3 + US2.1 — Liste avec filtres (ville, type, prix, équipements, campus...)
 router.get('/', ListingController.getAll);
+
+// US2.2 — Carte interactive : données géo légères pour markers
+// IMPORTANT : /map doit être AVANT /:id sinon Express traite "map" comme un :id
+router.get('/map', ListingController.getMapData);
+
 router.get('/:id', ListingController.getById);
 
-/**
- * --- ROUTES PROTÉGÉES (Owner / Admin) ---
- */
+// ─────────────────────────────────────────────────────────────
+// ROUTES PROTÉGÉES
+// ─────────────────────────────────────────────────────────────
 
-// Création : Authentification requise + Rôle OWNER ou ADMIN
-// On utilise upload.array('photos', 5) pour limiter à 5 photos
+// US1.4 — Publication annonce :
+//   - STUDENT/STUDENT_PREMIUM : 1 annonce gratuite (limite vérifiée dans le service)
+//   - OWNER/ADMIN : annonces illimitées
 router.post(
   '/',
   requireAuth,
-  requireRole(['OWNER', 'ADMIN']),
+  requireRole(['STUDENT', 'STUDENT_PREMIUM', 'OWNER', 'ADMIN']),
   upload.array('photos', 5),
   ListingController.create
 );
 
-// Mise à jour : Filtré par propriété du logement à l'intérieur du controller
+// Mise à jour : vérification de propriété dans le service
 router.patch(
   '/:id',
   requireAuth,
-  requireRole(['OWNER', 'ADMIN']),
-  upload.none(), // Pas de nouvelles photos gérées via patch pour l'instant (JSON ou simple Text)
+  requireRole(['STUDENT', 'STUDENT_PREMIUM', 'OWNER', 'ADMIN']),
+  upload.none(),
   ListingController.update
 );
 
 // Suppression
-router.delete(
-  '/:id',
-  requireAuth,
-  ListingController.remove
-);
+router.delete('/:id', requireAuth, ListingController.remove);
 
 export default router;

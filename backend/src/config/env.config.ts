@@ -38,6 +38,30 @@ const EnvSchema = z.object({
   CLOUD_NAME: z.string({ required_error: 'CLOUD_NAME est manquante dans le .env' }),
   API_KEY: z.string({ required_error: 'API_KEY Cloudinary est manquante dans le .env' }),
   API_SECRET: z.string({ required_error: 'API_SECRET Cloudinary est manquante dans le .env' }),
+
+  // Claude API — Anthropic (US4.1 — matching IA, optionnel en développement)
+  ANTHROPIC_API_KEY: z.string().optional(),
+
+  // Algolia Search (US2.4 — optionnels, dégradation gracieuse si absents)
+  ALGOLIA_APP_ID: z.string().optional(),
+  ALGOLIA_WRITE_API_KEY: z.string().optional(),
+  ALGOLIA_SEARCH_API_KEY: z.string().optional(),
+
+  // MTN Mobile Money (US4.3 — optionnels en développement)
+  MTN_MOMO_SUBSCRIPTION_KEY: z.string().optional(),
+  MTN_MOMO_API_USER: z.string().optional(),
+  MTN_MOMO_API_KEY: z.string().optional(),
+  MTN_MOMO_ENVIRONMENT: z.enum(['sandbox', 'production']).default('sandbox'),
+  MTN_MOMO_BASE_URL: z.string().default('https://sandbox.momodeveloper.mtn.com'),
+
+  // Orange Money (US4.4 — optionnels en développement)
+  ORANGE_CLIENT_ID: z.string().optional(),
+  ORANGE_CLIENT_SECRET: z.string().optional(),
+  ORANGE_MONEY_BASE_URL: z.string().default('https://api.orange.com'),
+  ORANGE_MONEY_WEBHOOK_SECRET: z.string().optional(),
+
+  // URL publique du backend (pour les webhooks)
+  APP_BASE_URL: z.string().default('http://localhost:3000'),
 });
 
 // Validation au démarrage : si une variable obligatoire est absente, on crash proprement
@@ -68,5 +92,35 @@ export const config = {
     cloudName: env.CLOUD_NAME,
     apiKey: env.API_KEY,
     apiSecret: env.API_SECRET,
-  }
+  },
+
+  /** Clé API Claude / Anthropic (US4.1) */
+  anthropicApiKey: env.ANTHROPIC_API_KEY,
+
+  /** Configuration Algolia (US2.4) */
+  algolia: {
+    appId: env.ALGOLIA_APP_ID,
+    writeApiKey: env.ALGOLIA_WRITE_API_KEY,
+    searchApiKey: env.ALGOLIA_SEARCH_API_KEY,
+  },
+
+  /** Configuration MTN MoMo (US4.3) */
+  mtnMomo: {
+    subscriptionKey: env.MTN_MOMO_SUBSCRIPTION_KEY,
+    apiUser: env.MTN_MOMO_API_USER,
+    apiKey: env.MTN_MOMO_API_KEY,
+    environment: env.MTN_MOMO_ENVIRONMENT,
+    baseUrl: env.MTN_MOMO_BASE_URL,
+  },
+
+  /** Configuration Orange Money (US4.4) */
+  orangeMoney: {
+    clientId: env.ORANGE_CLIENT_ID,
+    clientSecret: env.ORANGE_CLIENT_SECRET,
+    baseUrl: env.ORANGE_MONEY_BASE_URL,
+    webhookSecret: env.ORANGE_MONEY_WEBHOOK_SECRET,
+  },
+
+  /** URL publique du backend */
+  appBaseUrl: env.APP_BASE_URL,
 };
