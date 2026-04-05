@@ -90,6 +90,11 @@ export class AuthService {
     const isValid = await bcrypt.compare(password, user.password);
     if (!isValid) throw new AppError("Identifiants incorrects.", 401);
 
+    // Vérification du statut du compte
+  if (user.status === 'SUSPENDED' || user.status === 'BANNED') {
+    throw new AppError("Votre compte est suspendu. Veuillez contacter l'administrateur.", 403);
+  }
+
     // Génération des tokens
     const accessToken = generateAccessToken({ userId: user.id, role: user.role });
 

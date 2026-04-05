@@ -14,19 +14,20 @@ export const UpdateProfileSchema = z.object({
   name: z
     .string()
     .min(2, "Le nom doit contenir au moins 2 caractères.")
-    .max(100, "Le nom ne peut pas dépasser 100 caractères.")
+    .max(25, "Le nom ne peut pas dépasser 20 caractères.")
     .transform(sanitizeString) // Sanitize contre XSS
     .optional(),
 
   university: z
     .string()
-    .max(150, "L'université ne peut pas dépasser 150 caractères.")
+    .max(50, "L'université ne peut pas dépasser 50 caractères.")
     .transform(sanitizeString) // Sanitize contre XSS
     .optional(),
 
   phone: z
     .string()
-    .max(20, "Le téléphone ne peut pas dépasser 20 caractères.")
+    .max(12, "Le téléphone ne peut pas dépasser 12 caractères.")
+    .regex(/^[0-9+\s()-]+$/, "Le téléphone doit contenir uniquement des chiffres et caractères spéciaux (+, -, parentheses)")
     .transform(sanitizeString) // Sanitize contre XSS
     .optional(),
 

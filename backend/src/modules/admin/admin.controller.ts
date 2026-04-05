@@ -153,3 +153,20 @@ export const getStats = async (req: Request, res: Response, next: NextFunction) 
     next(err);
   }
 };
+
+// ===================================================================
+  // Filter users details by ID (UC17)
+  // ===================================================================
+
+  /**
+   * acceder au details des utilisateurs.
+   */
+export const getUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const user = await AdminService.getUserById(id);
+    res.status(200).json(successResponse("Utilisateur récupéré", user));
+  } catch (err) {
+    next(err);
+  }
+};

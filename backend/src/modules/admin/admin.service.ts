@@ -190,4 +190,35 @@ export class AdminService {
       averageSystemPrice: avgPrice._avg.price || 0
     };
   }
+
+  // ===================================================================
+  // Filter users by ID (UC17)
+  // ===================================================================
+
+  /**
+   * Accède au détail d'un utilisateur par son ID.
+   * @param userId - ID de l'utilisateur.
+   */
+  static async getUserById(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        university:true,
+        phone: true,
+        avatar: true,
+        trustScore: true,
+        isVerified: true,
+        status: true,
+        createdAt: true,
+      }
+    });
+    if (!user) throw new AppError("Utilisateur introuvable.", 404);
+    return user;
+  }
 }
+
+

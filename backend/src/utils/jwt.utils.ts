@@ -55,13 +55,20 @@ export const generateAccessToken = (payload: JwtPayload): string => {
 /**
  * Vérifie et décode un Access Token JWT.
  * Lance une exception si le token est invalide, malformé ou expiré.
+ *
+ * SÉCURITÉ: N'accepte qu'un seul algorithme (RS256 OU HS256) selon l'environnement
+ * pour prévenir les attaques "Algorithm Confusion" (CVE-2015-9235).
+ *
  * @param token - La chaîne JWT reçue dans le header Authorization.
  * @returns Le payload décodé {userId, role} si le token est valide.
  */
 export const verifyAccessToken = (token: string): JwtPayload => {
-  // On accepte les deux algorithmes pour la compatibilité dev/prod
+  // Détection de l'algorithme attendu (doit correspondre à celui utilisé pour signer)
+  // Si la clé publique commence par "-----BEGIN", c'est RS256, sinon HS256
+  const expectedAlg = PUBLIC_KEY.includes('BEGIN') ? 'RS256' : 'HS256';
+  
   return jwt.verify(token, PUBLIC_KEY, {
-    algorithms: ['RS256', 'HS256'],
+    algorithms: [expectedAlg], // Un seul algorithme accepté pour éviter confusion attacks
   }) as JwtPayload;
 };
 

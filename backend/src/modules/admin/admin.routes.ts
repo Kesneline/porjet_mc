@@ -70,4 +70,10 @@ router.patch('/reports/:id/resolve', AdminController.resolveReport);
  */
 router.get('/stats', AdminController.getStats);
 
+/**
+ * GET /api/admin/users/:id
+ * @desc Récupère les details d'un utilisateur pour audit
+ */
+router.get('/users/:id', AdminController.getUser);
+
 export default router;
