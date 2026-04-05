@@ -9,7 +9,7 @@
  */
 import { Request, Response, NextFunction } from 'express';
 import { ListingService } from './listing.service';
-import { CreateListingSchema, UpdateListingSchema, ListingQuerySchema } from './listing.validator';
+import { CreateListingSchema, UpdateListingSchema, CreateListingInput, ListingQuerySchema } from './listing.validator';
 import { successResponse } from '../../utils/response.formatter';
 import { AppError } from '../../middlewares/error.middleware';
 
@@ -84,7 +84,7 @@ export const create = async (req: Request, res: Response, next: NextFunction): P
       rawData.amenities = cleanBody.amenities;
     }
 
-    const validatedData = CreateListingSchema.parse(rawData);
+    const validatedData = CreateListingSchema.parse(rawData) as CreateListingInput;
 
     const files = req.files as Express.Multer.File[];
     if (!files || files.length === 0) {

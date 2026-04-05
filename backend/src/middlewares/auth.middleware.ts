@@ -22,6 +22,7 @@ import { errorResponse } from '../utils/response.formatter';
 
 // Augmentation du type Express.Request pour que TypeScript accepte req.user
 // dans tous les controllers sans erreur de compilation.
+/* eslint-disable @typescript-eslint/no-namespace */
 declare global {
   namespace Express {
     interface Request {
