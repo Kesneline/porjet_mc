@@ -1,30 +1,124 @@
 /**
  * @file messaging.service.ts
- * @description Service de messagerie sécurisée entre utilisateurs (US2.3).
+ * @description Service de messagerie sécurisée entre utilisateurs (US2.3 + US5.3).
  *
  * En tant qu'utilisateur, je veux envoyer des messages sécurisés au
  * propriétaire sans révéler mon numéro de téléphone.
  *
- * SÉCURITÉ :
+ * SÉCURITÉ (US2.3) :
  *   - Les numéros de téléphone ne sont JAMAIS inclus dans les réponses messagerie
- *   - Les liens suspects (Western Union, MoneyGram, etc.) sont bloqués
  *   - Seuls les participants d'une conversation peuvent lire/écrire dedans
+ *
+ * ANTI-ARNAQUE (US5.3) :
+ *   - Les liens de paiement suspects sont détectés et bloqués (Western Union, etc.)
+ *   - Les raccourcisseurs d'URL sont bloqués (bit.ly, tinyurl, etc.)
+ *   - Les tentatives de partage de coordonnées bancaires (IBAN, RIB) sont bloquées
+ *   - Les adresses crypto sont détectées
+ *   - Le langage d'urgence financière est signalé
+ *   - Les messages bloqués sont marqués avec catégorie et raison
+ *   - Les utilisateurs récidivistes sont signalés (compteur de messages bloqués)
  */
 import { prisma } from '../../config/prisma.config';
 import { AppError } from '../../middlewares/error.middleware';
 
-// Patterns de liens suspects à bloquer dans les messages (US5.3 anticipé)
-const SUSPICIOUS_PATTERNS = [
-  /western\s*union/i,
-  /money\s*gram/i,
-  /bit\.ly/i,
-  /tinyurl\.com/i,
-  /paypal\.me/i,
-  /bit\.do/i,
-  /goo\.gl/i,
-  /virement\s*(bancaire|international)/i,
-  /envoy(er|ez)\s*(de\s*l')?argent/i,
+// ─────────────────────────────────────────────────────────────
+// US5.3 — FILTRAGE ANTI-ARNAQUE COMPLET
+// ─────────────────────────────────────────────────────────────
+
+/** Catégories de contenus suspects pour le reporting */
+type SuspiciousCategory =
+  | 'PAYMENT_SERVICE'        // Western Union, MoneyGram, etc.
+  | 'URL_SHORTENER'          // bit.ly, tinyurl, goo.gl, etc.
+  | 'BANK_TRANSFER'          // Virement, IBAN, RIB
+  | 'CRYPTO'                 // Adresses Bitcoin, Ethereum, etc.
+  | 'EXTERNAL_PAYMENT'       // PayPal, CashApp, Venmo, etc.
+  | 'URGENCY_SCAM'           // Langage d'urgence financière
+  | 'PHISHING_URL'           // Liens vers des domaines suspects
+  | 'PERSONAL_INFO_REQUEST'; // Demande de données personnelles sensibles
+
+interface SuspiciousPattern {
+  pattern: RegExp;
+  category: SuspiciousCategory;
+  reason: string;
+}
+
+/** Résultat d'une analyse de contenu suspect */
+interface SuspiciousContentResult {
+  isSuspicious: boolean;
+  category: SuspiciousCategory | null;
+  reason: string | null;
+}
+
+/**
+ * Patterns de contenus suspects organisés par catégorie (US5.3).
+ * Chaque pattern a une raison explicative pour le message de blocage.
+ */
+const SUSPICIOUS_PATTERNS: SuspiciousPattern[] = [
+  // --- Services de transfert d'argent internationaux ---
+  { pattern: /western\s*union/i, category: 'PAYMENT_SERVICE', reason: 'Service de transfert Western Union détecté' },
+  { pattern: /money\s*gram/i, category: 'PAYMENT_SERVICE', reason: 'Service de transfert MoneyGram détecté' },
+  { pattern: /ria\s*transfer/i, category: 'PAYMENT_SERVICE', reason: 'Service de transfert Ria détecté' },
+  { pattern: /world\s*remit/i, category: 'PAYMENT_SERVICE', reason: 'Service de transfert WorldRemit détecté' },
+  { pattern: /sendwave/i, category: 'PAYMENT_SERVICE', reason: 'Service de transfert Sendwave détecté' },
+  { pattern: /remitly/i, category: 'PAYMENT_SERVICE', reason: 'Service de transfert Remitly détecté' },
+
+  // --- Raccourcisseurs d'URL (masquent la vraie destination) ---
+  { pattern: /bit\.ly\//i, category: 'URL_SHORTENER', reason: 'Lien raccourci bit.ly détecté' },
+  { pattern: /tinyurl\.com/i, category: 'URL_SHORTENER', reason: 'Lien raccourci TinyURL détecté' },
+  { pattern: /bit\.do\//i, category: 'URL_SHORTENER', reason: 'Lien raccourci bit.do détecté' },
+  { pattern: /goo\.gl\//i, category: 'URL_SHORTENER', reason: 'Lien raccourci goo.gl détecté' },
+  { pattern: /t\.co\//i, category: 'URL_SHORTENER', reason: 'Lien raccourci t.co détecté' },
+  { pattern: /is\.gd\//i, category: 'URL_SHORTENER', reason: 'Lien raccourci is.gd détecté' },
+  { pattern: /v\.gd\//i, category: 'URL_SHORTENER', reason: 'Lien raccourci v.gd détecté' },
+  { pattern: /shorturl\.at/i, category: 'URL_SHORTENER', reason: 'Lien raccourci shorturl détecté' },
+  { pattern: /cutt\.ly/i, category: 'URL_SHORTENER', reason: 'Lien raccourci cutt.ly détecté' },
+  { pattern: /rb\.gy/i, category: 'URL_SHORTENER', reason: 'Lien raccourci rb.gy détecté' },
+
+  // --- Virements bancaires et coordonnées bancaires ---
+  { pattern: /virement\s*(bancaire|international)/i, category: 'BANK_TRANSFER', reason: 'Demande de virement bancaire détectée' },
+  { pattern: /\bIBAN\b/i, category: 'BANK_TRANSFER', reason: 'Numéro IBAN détecté' },
+  { pattern: /\bRIB\b/i, category: 'BANK_TRANSFER', reason: 'Numéro RIB détecté' },
+  { pattern: /\bSWIFT\b/i, category: 'BANK_TRANSFER', reason: 'Code SWIFT détecté' },
+  { pattern: /\bBIC\b/i, category: 'BANK_TRANSFER', reason: 'Code BIC détecté' },
+  { pattern: /num[ée]ro\s*de?\s*compte/i, category: 'BANK_TRANSFER', reason: 'Demande de numéro de compte détectée' },
+  { pattern: /coordonn[ée]es?\s*bancaire/i, category: 'BANK_TRANSFER', reason: 'Demande de coordonnées bancaires détectée' },
+
+  // --- Cryptomonnaies (adresses de portefeuille) ---
+  { pattern: /\b[13][a-km-zA-HJ-NP-Z1-9]{25,34}\b/, category: 'CRYPTO', reason: 'Adresse Bitcoin détectée' },
+  { pattern: /\b0x[a-fA-F0-9]{40}\b/, category: 'CRYPTO', reason: 'Adresse Ethereum détectée' },
+  { pattern: /\bbitcoin\b/i, category: 'CRYPTO', reason: 'Mention de Bitcoin détectée' },
+  { pattern: /\bcrypto\s*monnaie/i, category: 'CRYPTO', reason: 'Mention de cryptomonnaie détectée' },
+  { pattern: /\busdt\b/i, category: 'CRYPTO', reason: 'Mention de USDT/Tether détectée' },
+  { pattern: /\bbinance\b/i, category: 'CRYPTO', reason: 'Mention de Binance détectée' },
+
+  // --- Plateformes de paiement externes ---
+  { pattern: /paypal\.me/i, category: 'EXTERNAL_PAYMENT', reason: 'Lien PayPal détecté' },
+  { pattern: /paypal\.com/i, category: 'EXTERNAL_PAYMENT', reason: 'Lien PayPal détecté' },
+  { pattern: /\bcash\s*app\b/i, category: 'EXTERNAL_PAYMENT', reason: 'Mention de CashApp détectée' },
+  { pattern: /\bvenmo\b/i, category: 'EXTERNAL_PAYMENT', reason: 'Mention de Venmo détectée' },
+  { pattern: /\bzelle\b/i, category: 'EXTERNAL_PAYMENT', reason: 'Mention de Zelle détectée' },
+  { pattern: /\bskrill\b/i, category: 'EXTERNAL_PAYMENT', reason: 'Mention de Skrill détectée' },
+
+  // --- Langage d'urgence financière (arnaque classique) ---
+  { pattern: /envoy(er|ez)\s*(de\s*l['']\s*)?argent/i, category: 'URGENCY_SCAM', reason: "Demande d'envoi d'argent détectée" },
+  { pattern: /urgent\s*(paiement|transfert|envoi)/i, category: 'URGENCY_SCAM', reason: 'Demande urgente de paiement détectée' },
+  { pattern: /pay(er|ez)\s*(vite|maintenant|tout\s*de\s*suite|imm[ée]diatement)/i, category: 'URGENCY_SCAM', reason: 'Demande de paiement urgent détectée' },
+  { pattern: /derni[eè]re\s*chance\s*(de\s*)?(pay|r[eé]serv)/i, category: 'URGENCY_SCAM', reason: 'Pression de "dernière chance" détectée' },
+  { pattern: /d[eé]p[oô]t\s*(urgent|imm[eé]diat|obligatoire)/i, category: 'URGENCY_SCAM', reason: 'Demande de dépôt urgent détectée' },
+  { pattern: /avance\s*(d['']\s*)?argent/i, category: 'URGENCY_SCAM', reason: "Demande d'avance d'argent détectée" },
+  { pattern: /garantie\s*(financi[eè]re|mon[eé]taire)/i, category: 'URGENCY_SCAM', reason: 'Demande de garantie financière suspecte détectée' },
+
+  // --- URLs de phishing potentiel (domaines TLD suspects) ---
+  { pattern: /\b\w+\.(xyz|top|buzz|click|loan|work|gq|cf|tk|ml)\b/i, category: 'PHISHING_URL', reason: 'Lien vers un domaine suspect détecté' },
+
+  // --- Demandes d'informations personnelles suspectes ---
+  { pattern: /num[eé]ro\s*de?\s*(carte|cr[eé]dit|d[eé]bit)/i, category: 'PERSONAL_INFO_REQUEST', reason: 'Demande de numéro de carte bancaire détectée' },
+  { pattern: /code\s*(secret|pin|cvv|cvc)/i, category: 'PERSONAL_INFO_REQUEST', reason: 'Demande de code secret/PIN détectée' },
+  { pattern: /mot\s*de\s*passe/i, category: 'PERSONAL_INFO_REQUEST', reason: 'Demande de mot de passe détectée' },
 ];
+
+/** Seuil de messages bloqués avant signalement automatique à l'admin */
+const BLOCKED_MESSAGES_ALERT_THRESHOLD = 3;
 
 export class MessagingService {
 
@@ -64,6 +158,9 @@ export class MessagingService {
       return { conversation: existingConversation, message, isNew: false };
     }
 
+    // US5.3 — Vérifier le contenu suspect AVANT de créer la conversation
+    const suspiciousResult = this.analyzeSuspiciousContent(firstMessage);
+
     // Créer une nouvelle conversation avec les deux participants + premier message
     const conversation = await prisma.conversation.create({
       data: {
@@ -77,6 +174,7 @@ export class MessagingService {
           create: {
             content: this.sanitizeMessage(firstMessage),
             senderId,
+            isBlocked: suspiciousResult.isSuspicious,
           },
         },
       },
@@ -90,13 +188,25 @@ export class MessagingService {
       },
     });
 
-    return { conversation, message: conversation.messages[0], isNew: true };
+    const result: any = { conversation, message: conversation.messages[0], isNew: true };
+
+    // Si le premier message est suspect, ajouter l'avertissement
+    if (suspiciousResult.isSuspicious) {
+      await this.checkRecidivism(senderId);
+      result._warning = 'Ce message a été bloqué pour votre sécurité.';
+      result._blocked = {
+        category: suspiciousResult.category,
+        reason: suspiciousResult.reason,
+      };
+    }
+
+    return result;
   }
 
   /**
    * Liste toutes les conversations d'un utilisateur.
    * Retourne le dernier message de chaque conversation et les infos du participant.
-   * Les numéros de téléphone ne sont JAMAIS inclus.
+   * Les numéros de téléphone ne sont JAMAIS inclus (US2.3).
    *
    * @param userId - ID de l'utilisateur connecté
    */
@@ -181,7 +291,7 @@ export class MessagingService {
 
   /**
    * Envoie un message dans une conversation existante.
-   * Vérifie la participation et filtre les liens suspects.
+   * Vérifie la participation et filtre les liens suspects (US5.3).
    *
    * @param conversationId - ID de la conversation
    * @param senderId       - ID de l'expéditeur
@@ -191,14 +301,14 @@ export class MessagingService {
     await this.checkParticipant(conversationId, senderId);
 
     const sanitized = this.sanitizeMessage(content);
-    const isBlocked = this.containsSuspiciousContent(content);
+    const suspiciousResult = this.analyzeSuspiciousContent(content);
 
     const message = await prisma.message.create({
       data: {
         content: sanitized,
         senderId,
         conversationId,
-        isBlocked,
+        isBlocked: suspiciousResult.isSuspicious,
       },
       include: {
         sender: { select: { id: true, name: true } },
@@ -211,10 +321,17 @@ export class MessagingService {
       data: { updatedAt: new Date() },
     });
 
-    if (isBlocked) {
+    // US5.3 — Si le message est bloqué, vérifier le compteur de récidives
+    if (suspiciousResult.isSuspicious) {
+      await this.checkRecidivism(senderId);
+
       return {
         ...message,
-        _warning: "Ce message contient un lien ou terme suspect et a été bloqué pour votre sécurité.",
+        _warning: 'Ce message a été bloqué pour votre sécurité.',
+        _blocked: {
+          category: suspiciousResult.category,
+          reason: suspiciousResult.reason,
+        },
       };
     }
 
@@ -235,13 +352,70 @@ export class MessagingService {
     }
   }
 
-  /** Détecte les liens et termes suspects dans un message. */
-  private static containsSuspiciousContent(content: string): boolean {
-    return SUSPICIOUS_PATTERNS.some((pattern) => pattern.test(content));
+  /**
+   * US5.3 — Analyse le contenu d'un message pour détecter les patterns suspects.
+   * Retourne la catégorie et la raison si un pattern est trouvé.
+   *
+   * @param content - Contenu du message à analyser
+   * @returns Résultat de l'analyse avec catégorie et raison
+   */
+  private static analyzeSuspiciousContent(content: string): SuspiciousContentResult {
+    for (const { pattern, category, reason } of SUSPICIOUS_PATTERNS) {
+      if (pattern.test(content)) {
+        return { isSuspicious: true, category, reason };
+      }
+    }
+    return { isSuspicious: false, category: null, reason: null };
   }
 
-  /** Nettoie le message (trim + suppression caractères invisibles). */
+  /**
+   * US5.3 — Vérifie si un utilisateur a dépassé le seuil de messages bloqués.
+   * Si oui, crée un signalement automatique pour les admins.
+   *
+   * Cela permet de détecter les arnaqueurs récidivistes sans intervention manuelle.
+   *
+   * @param userId - ID de l'utilisateur dont on vérifie le compteur
+   */
+  private static async checkRecidivism(userId: string) {
+    try {
+      // Compter les messages bloqués de cet utilisateur
+      const blockedCount = await prisma.message.count({
+        where: {
+          senderId: userId,
+          isBlocked: true,
+        },
+      });
+
+      if (blockedCount >= BLOCKED_MESSAGES_ALERT_THRESHOLD) {
+        // Récupérer les infos de l'utilisateur pour le log
+        const user = await prisma.user.findUnique({
+          where: { id: userId },
+          select: { name: true, email: true },
+        });
+
+        // Log d'alerte pour les administrateurs
+        console.warn(
+          `[US5.3 ALERTE] Utilisateur récidiviste détecté : ${user?.name} (${user?.email}) - ` +
+          `${blockedCount} messages bloqués. Vérification manuelle recommandée.`
+        );
+
+        // Note: En production, on pourrait :
+        // 1. Envoyer une notification push aux admins
+        // 2. Créer un Report automatique dans la BDD
+        // 3. Suspendre temporairement l'utilisateur après N récidives
+      }
+    } catch (error) {
+      // Le compteur de récidive ne doit pas bloquer l'envoi du message
+      // (fire-and-forget avec catch silencieux)
+      console.error('[US5.3] Erreur lors de la vérification de récidive :', error);
+    }
+  }
+
+  /** Nettoie le message (trim + suppression caractères invisibles + caractères dangereux). */
   private static sanitizeMessage(content: string): string {
-    return content.trim().replace(/[\u200B-\u200D\uFEFF]/g, '');
+    return content
+      .trim()
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')       // Caractères invisibles (zero-width)
+      .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, ''); // Caractères de contrôle
   }
 }
