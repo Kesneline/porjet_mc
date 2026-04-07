@@ -17,6 +17,7 @@
 import { prisma } from '../../config/prisma.config';
 import bcrypt from 'bcryptjs';
 import { RegisterInput, LoginInput, RefreshInput } from './auth.validator';
+import { sendWelcomeEmail } from '../../services/email.service';
 import { 
   generateAccessToken, 
   generateRefreshToken 
@@ -56,8 +57,11 @@ export class AuthService {
         university: university ?? null,
         phone: phone ?? null,
       }
+      
     });
 
+    // Envoi d'un email de bienvenue (fonction asynchrone, on ne bloque pas la réponse)
+    sendWelcomeEmail(user.email, user.name);
     // Génération de l'Access Token JWT (durée : 15 min par défaut)
     const accessToken = generateAccessToken({ userId: user.id, role: user.role });
 

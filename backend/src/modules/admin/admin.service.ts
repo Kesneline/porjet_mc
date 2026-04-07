@@ -6,6 +6,7 @@ import { prisma } from '../../config/prisma.config';
 import { AppError } from '../../middlewares/error.middleware';
 import { ReportStatus } from '@prisma/client';
 import { ResolveReportInput, UpdateListingStatusInput, UpdateRoleInput, UpdateUserStatusInput } from './admin.dto';
+import { sendListingApprovedEmail } from '../../services/email.service';
 
 export class AdminService {
   /**
@@ -112,9 +113,12 @@ export class AdminService {
    * @param status - Nouveau statut (ACTIVE, REJECTED, etc.).
    */
   static async updateListingStatus(listingId: string, status: UpdateListingStatusInput['status']) {
-    const listing = await prisma.listing.findUnique({ where: { id: listingId } });
+    const listing = await prisma.listing.findUnique({ where: { id: listingId }, include: { owner: { select: { id: true, email: true, name: true } } } });
     if (!listing) throw new AppError("Logement introuvable.", 404);
 
+    if (status === 'ACTIVE' && listing.owner) {
+      sendListingApprovedEmail(listing.owner.email, listing.owner.name, listing.title).catch(err => console.error('Email error:', err));
+    }
     return await prisma.listing.update({
       where: { id: listingId },
       data: { status },
@@ -220,5 +224,3 @@ export class AdminService {
     return user;
   }
 }
-
-
