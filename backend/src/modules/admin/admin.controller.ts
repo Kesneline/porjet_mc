@@ -170,3 +170,17 @@ export const getUser = async (req: Request, res: Response, next: NextFunction) =
     next(err);
   }
 };
+
+/**
+ * Supprime un utilisateur (soft delete).
+ * DELETE /api/admin/users/:id
+ */
+export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { id } = req.params;
+    const result = await AdminService.deleteUser(id);
+    res.status(200).json(successResponse(result.message));
+  } catch (err) {
+    next(err);
+  }
+};

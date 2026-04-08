@@ -76,4 +76,10 @@ router.get('/stats', AdminController.getStats);
  */
 router.get('/users/:id', AdminController.getUser);
 
+/**
+ * DELETE /api/admin/users/:id
+ * @desc Supprime un utilisateur (soft delete)
+ */
+router.delete('/users/:id', AdminController.deleteUser);
+
 export default router;

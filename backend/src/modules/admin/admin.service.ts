@@ -117,7 +117,7 @@ export class AdminService {
     if (!listing) throw new AppError("Logement introuvable.", 404);
 
     if (status === 'ACTIVE' && listing.owner) {
-      sendListingApprovedEmail(listing.owner.email, listing.owner.name, listing.title).catch(err => console.error('Email error:', err));
+      sendListingApprovedEmail(listing.owner.email, listing.owner.name, listing.title);
     }
     return await prisma.listing.update({
       where: { id: listingId },
@@ -222,5 +222,21 @@ export class AdminService {
     });
     if (!user) throw new AppError("Utilisateur introuvable.", 404);
     return user;
+  }
+
+  /**
+   * Suppression d'un utilisateur par l'admin (soft delete).
+   */
+  static async deleteUser(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError("Utilisateur introuvable.", 404);
+    if (user.deletedAt) throw new AppError("Ce compte a déjà été supprimé.", 400);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: { deletedAt: new Date() }
+    });
+
+    return { message: "Utilisateur supprimé avec succès." };
   }
 }

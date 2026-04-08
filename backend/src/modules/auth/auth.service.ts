@@ -207,4 +207,24 @@ export class AuthService {
     // Aucune donnée à retourner : la déconnexion est un succès
     return null;
   }
+
+  /**
+   * Suppression de compte par l'utilisateur lui-même (soft delete).
+   * Supprime les refresh tokens associés.
+   */
+  static async deleteAccount(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError("Utilisateur introuvable.", 404);
+    if (user.deletedAt) throw new AppError("Ce compte a déjà été supprimé.", 400);
+
+    await prisma.$transaction([
+      prisma.refreshToken.deleteMany({ where: { userId } }),
+      prisma.user.update({
+        where: { id: userId },
+        data: { deletedAt: new Date() }
+      })
+    ]);
+
+    return { message: "Compte supprimé avec succès." };
+  }
 }
