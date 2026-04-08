@@ -27,10 +27,10 @@ export class UserService {
         isVerified: true,
         isPremium: true,
         createdAt: true,
-      }
+      },
     });
 
-    if (!user) throw new AppError("Utilisateur introuvable.", 404);
+    if (!user) throw new AppError('Utilisateur introuvable.', 404);
     return user;
   }
 
@@ -50,13 +50,13 @@ export class UserService {
             (error, result) => {
               if (error) return reject(new AppError("Échec de l'upload de l'avatar.", 500));
               resolve(result!.secure_url);
-            }
+            },
           );
           uploadStream.end(file.buffer);
         });
         updateData.avatar = avatarUrl;
       } catch (error) {
-        throw new AppError("Erreur lors de la mise à jour de la photo de profil.", 500);
+        throw new AppError('Erreur lors de la mise à jour de la photo de profil.', 500);
       }
     }
 
@@ -71,9 +71,71 @@ export class UserService {
         university: true,
         phone: true,
         avatar: true,
-      }
+      },
     });
 
     return updatedUser;
+  }
+
+  /**
+   * Récupère le profil public d'un utilisateur.
+   * @param userId - ID UUID de l'utilisateur.
+   */
+  static async getPublicProfile(userId: string) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        university: true,
+        avatar: true,
+        trustScore: true,
+        isVerified: true,
+        createdAt: true,
+        listings: {
+          where: { status: 'ACTIVE' },
+          select: {
+            id: true,
+            title: true,
+            city: true,
+            price: true,
+            photos: true,
+            type: true,
+          },
+        },
+        reviews: {
+          where: { listing: { status: 'ACTIVE' } },
+          select: {
+            id: true,
+            rating: true,
+            comment: true,
+          },
+        },
+      },
+    });
+
+    if (!user) throw new AppError('Utilisateur introuvable.', 404);
+    return user;
+  }
+
+  /**
+   * Supprime le compte de l'utilisateur (soft delete).
+   * Définit le status à BANNED, efface l'email et définit deletedAt.
+   * @param userId - ID UUID de l'utilisateur.
+   */
+  static async deleteAccount(userId: string) {
+    const user = await prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError('Utilisateur introuvable.', 404);
+
+    await prisma.user.update({
+      where: { id: userId },
+      data: {
+        status: 'BANNED',
+        email: `deleted_${userId}@deleted.local`,
+        deletedAt: new Date(),
+      },
+    });
+
+    return { message: 'Compte supprimé avec succès.' };
   }
 }

@@ -103,3 +103,18 @@ export const logout = async (req: Request, res: Response, next: NextFunction): P
     next(err);
   }
 };
+
+/**
+ * Handler DELETE /api/auth/account
+ * 1. Supprime le compte de l'utilisateur connecté (soft delete)
+ * 2. Retourne HTTP 200 avec un message de confirmation
+ */
+export const deleteAccount = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const userId = req.user!.userId;
+    const result = await AuthService.deleteAccount(userId);
+    res.status(200).json(successResponse(result.message));
+  } catch (err) {
+    next(err);
+  }
+};

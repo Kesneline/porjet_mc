@@ -50,5 +50,12 @@ router.post('/refresh', AuthController.refresh);
  */
 router.post('/logout', requireAuth, AuthController.logout);
 
+/**
+ * @route DELETE /api/auth/account
+ * @desc Suppression de son propre compte (soft delete)
+ * @access Private
+ */
+router.delete('/account', requireAuth, AuthController.deleteAccount);
+
 export default router;
 
