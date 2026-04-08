@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -11,13 +11,15 @@ import {
   Easing,
 } from "react-native";
 import { useRouter } from "expo-router";
+import { BlurView } from "expo-blur";
+import { Ionicons } from "@expo/vector-icons";
 
 const { width } = Dimensions.get("window");
 
 const PRIMARY = "#7C3AED";
 const ON_SURFACE = "#1a1c1d";
 const ON_SURFACE_VARIANT = "#6b6b70";
-const SLIDE_DURATION = 4000;
+const SLIDE_DURATION = 2000;
 
 const slides = [
   {
@@ -52,23 +54,24 @@ export default function OnboardingScreen() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
+  const [isPaused, setIsPaused] = useState(false);
 
   const isLastSlide = currentIndex === slides.length - 1;
 
   useEffect(() => {
-    if (isLastSlide) return;
+    if (isLastSlide || isPaused) return;
 
     const timer = setTimeout(() => {
       Animated.parallel([
         Animated.timing(slideAnim, {
           toValue: 1,
-          duration: 400,
+          duration: 250,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
         Animated.timing(opacityAnim, {
           toValue: 0,
-          duration: 400,
+          duration: 250,
           easing: Easing.in(Easing.cubic),
           useNativeDriver: true,
         }),
@@ -80,13 +83,13 @@ export default function OnboardingScreen() {
         Animated.parallel([
           Animated.timing(slideAnim, {
             toValue: 0,
-            duration: 400,
+            duration: 250,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
           Animated.timing(opacityAnim, {
             toValue: 1,
-            duration: 400,
+            duration: 250,
             easing: Easing.out(Easing.cubic),
             useNativeDriver: true,
           }),
@@ -95,7 +98,13 @@ export default function OnboardingScreen() {
     }, SLIDE_DURATION);
 
     return () => clearTimeout(timer);
-  }, [currentIndex]);
+  }, [currentIndex, isPaused, isLastSlide]);
+
+  const handleBack = () => {
+    if (currentIndex > 0) {
+      setCurrentIndex((prev) => prev - 1);
+    }
+  };
 
   const translateX = slideAnim.interpolate({
     inputRange: [0, 1],
@@ -108,7 +117,22 @@ export default function OnboardingScreen() {
     <View style={styles.container}>
       <StatusBar barStyle="dark-content" />
 
-      <View style={styles.content}>
+      {/* Bouton de retour translucide */}
+      {currentIndex > 0 && (
+        <Pressable onPress={handleBack} style={styles.backBtnContainer}>
+          <BlurView intensity={40} tint="light" style={styles.backBtnBlur} />
+          <View style={styles.backBtnInner}>
+            <Ionicons name="arrow-back" size={24} color="#1a1c1d" />
+          </View>
+        </Pressable>
+      )}
+
+      <Pressable
+        style={styles.content}
+        onPressIn={() => setIsPaused(true)}
+        onPressOut={() => setIsPaused(false)}
+        delayLongPress={150}
+      >
         <Animated.View
           style={[
             styles.slideContent,
@@ -131,27 +155,14 @@ export default function OnboardingScreen() {
 
               <View style={styles.authButtonsContainer}>
                 <Pressable
-                  onPress={() => router.push("/register")}
+                  onPress={() => router.push("/auth-entry")}
                   hitSlop={16}
                   style={({ pressed }) => [
-                    styles.authButton,
-                    styles.primaryButton,
-                    { opacity: pressed ? 0.85 : 1 },
+                    styles.getStartedButton,
+                    { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] },
                   ]}
                 >
-                  <Text style={styles.primaryButtonText}>Register</Text>
-                </Pressable>
-
-                <Pressable
-                  onPress={() => router.push("/login")}
-                  hitSlop={16}
-                  style={({ pressed }) => [
-                    styles.authButton,
-                    styles.secondaryButton,
-                    { opacity: pressed ? 0.85 : 1 },
-                  ]}
-                >
-                  <Text style={styles.secondaryButtonText}>Login</Text>
+                  <Text style={styles.getStartedText}>Get Started</Text>
                 </Pressable>
               </View>
             </>
@@ -168,7 +179,7 @@ export default function OnboardingScreen() {
             </>
           )}
         </Animated.View>
-      </View>
+      </Pressable>
 
       <View style={styles.footer}>
         <View style={styles.pagination}>
@@ -191,6 +202,25 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#ffffff",
+  },
+  backBtnContainer: {
+    position: "absolute",
+    top: 50,
+    left: 20,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    overflow: "hidden",
+    zIndex: 10,
+  },
+  backBtnBlur: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.05)",
+  },
+  backBtnInner: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     flex: 1,
@@ -231,31 +261,26 @@ const styles = StyleSheet.create({
   },
   authButtonsContainer: {
     width: "100%",
-    gap: 16,
+    alignItems: "center",
     paddingHorizontal: 20,
   },
-  authButton: {
-    paddingVertical: 18,
+  getStartedButton: {
+    width: "100%",
+    paddingVertical: 20,
     alignItems: "center",
-    borderRadius: 28,
-  },
-  primaryButton: {
+    borderRadius: 9999,
     backgroundColor: PRIMARY,
+    shadowColor: PRIMARY,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 14,
+    elevation: 6,
   },
-  primaryButtonText: {
+  getStartedText: {
     color: "#ffffff",
-    fontSize: 22,
-    fontWeight: "600",
-  },
-  secondaryButton: {
-    backgroundColor: "transparent",
-    borderWidth: 2,
-    borderColor: "#E0D4FC",
-  },
-  secondaryButtonText: {
-    color: PRIMARY,
-    fontSize: 22,
-    fontWeight: "600",
+    fontSize: 20,
+    fontWeight: "700",
+    letterSpacing: 0.4,
   },
   footer: {
     paddingHorizontal: 32,

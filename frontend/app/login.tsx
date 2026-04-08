@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Platform,
   Animated,
   Dimensions,
+  Modal,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
@@ -16,7 +17,7 @@ import { z } from "zod";
 import { Ionicons } from "@expo/vector-icons";
 import Input from "@/components/ui/Input";
 
-const { width } = Dimensions.get("window");
+const { width, height } = Dimensions.get("window");
 
 const PRIMARY = "#7c4dff";
 const PRIMARY_CONTAINER = "#5d21df";
@@ -36,8 +37,34 @@ export default function LoginScreen() {
   const [method, setMethod] = useState<LoginMethod>(null);
   const [showPassword, setShowPassword] = useState(false);
 
+  // Method drawer
+  const [showMethodDrawer, setShowMethodDrawer] = useState(false);
+  const methodDrawerAnim = useRef(new Animated.Value(height)).current;
+  const methodBackdropAnim = useRef(new Animated.Value(0)).current;
+
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  // Auto-open on mount
+  useEffect(() => {
+    const t = setTimeout(() => openMethodDrawer(), 120);
+    return () => clearTimeout(t);
+  }, []);
+
+  const openMethodDrawer = () => {
+    setShowMethodDrawer(true);
+    Animated.parallel([
+      Animated.spring(methodDrawerAnim, { toValue: 0, damping: 20, stiffness: 150, useNativeDriver: true }),
+      Animated.timing(methodBackdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const closeMethodDrawer = (cb?: () => void) => {
+    Animated.parallel([
+      Animated.timing(methodDrawerAnim, { toValue: height, duration: 280, useNativeDriver: true }),
+      Animated.timing(methodBackdropAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start(() => { setShowMethodDrawer(false); cb && cb(); });
+  };
 
   const emailForm = useForm<{ email: string }>({
     defaultValues: { email: "" },
@@ -114,8 +141,10 @@ export default function LoginScreen() {
   };
 
   const handleMethodSelect = (selected: LoginMethod) => {
-    setMethod(selected);
-    animateToNext(() => setStep(2));
+    closeMethodDrawer(() => {
+      setMethod(selected);
+      animateToNext(() => setStep(2));
+    });
   };
 
   const handleIdentitySubmit = () => {
@@ -143,7 +172,7 @@ export default function LoginScreen() {
 
   const handleBack = () => {
     if (step === 1) {
-      router.back();
+      openMethodDrawer();
     } else {
       animateToPrev(() => setStep((step - 1) as Step));
     }
@@ -187,7 +216,7 @@ export default function LoginScreen() {
       <StatusBar barStyle="dark-content" />
 
       <View style={styles.progressBar}>
-        <View style={[styles.progressFill, { width: getProgressWidth() }]} />
+        <View style={[styles.progressFill, { width: getProgressWidth() as any }]} />
       </View>
 
       <View style={styles.header}>
@@ -210,43 +239,10 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>{getStepSubtitle()}</Text>
         </View>
 
-         {/* STEP 1: Choose method */}
+        {/* STEP 1: placeholder (drawer handles selection) */}
         {step === 1 && (
           <View style={styles.methodSection}>
-            <Pressable
-              onPress={() => handleMethodSelect("email")}
-              style={({ pressed }) => [
-                styles.methodCard,
-                { opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              <Ionicons name="mail-outline" size={20} color={PRIMARY} />
-              <Text style={styles.methodTitle}>Email</Text>
-              <Ionicons
-                name="arrow-forward"
-                size={18}
-                color={ON_SURFACE_VARIANT}
-              />
-            </Pressable>
-
-            <Pressable
-              onPress={() => handleMethodSelect("phone")}
-              style={({ pressed }) => [
-                styles.methodCard,
-                { opacity: pressed ? 0.85 : 1 },
-              ]}
-            >
-              <Ionicons name="call-outline" size={20} color={PRIMARY} />
-              <Text style={styles.methodTitle}>Phone Number</Text>
-              <Ionicons
-                name="arrow-forward"
-                size={18}
-                color={ON_SURFACE_VARIANT}
-              />
-            </Pressable>
-
-
-
+            <Text style={styles.methodPlaceholderText}>Sélectionnez une méthode ci-dessous</Text>
           </View>
         )}
 
@@ -458,6 +454,47 @@ export default function LoginScreen() {
           <Text style={styles.footerLink}>Register</Text>
         </Pressable>
       </View>
+
+      {/* ── METHOD DRAWER (auto-open on step 1) ── */}
+      <Modal visible={showMethodDrawer} transparent animationType="none" statusBarTranslucent>
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)", opacity: methodBackdropAnim }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => closeMethodDrawer(() => router.back())} />
+          </Animated.View>
+          <Animated.View style={[styles.methodDrawer, { transform: [{ translateY: methodDrawerAnim }] }]}>
+            <View style={styles.drawerPill} />
+            <Pressable onPress={() => closeMethodDrawer(() => router.back())} hitSlop={12}
+              style={styles.methodDrawerBack}>
+              <Ionicons name="arrow-back" size={20} color={ON_SURFACE_VARIANT} />
+              <Text style={styles.methodDrawerBackText}>Back</Text>
+            </Pressable>
+            <Text style={styles.methodDrawerTitle}>Sign In</Text>
+            <Text style={styles.methodDrawerSub}>Choose your login method</Text>
+            <Pressable onPress={() => handleMethodSelect("email")}
+              style={({ pressed }) => [styles.methodDrawerCard, { opacity: pressed ? 0.82 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+              <View style={styles.methodDrawerIconWrap}>
+                <Ionicons name="mail-outline" size={22} color={PRIMARY} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.methodDrawerCardTitle}>Email Address</Text>
+                <Text style={styles.methodDrawerCardSub}>Sign in with your email</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={ON_SURFACE_VARIANT} />
+            </Pressable>
+            <Pressable onPress={() => handleMethodSelect("phone")}
+              style={({ pressed }) => [styles.methodDrawerCard, { opacity: pressed ? 0.82 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+              <View style={styles.methodDrawerIconWrap}>
+                <Ionicons name="call-outline" size={22} color={PRIMARY} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.methodDrawerCardTitle}>Phone Number</Text>
+                <Text style={styles.methodDrawerCardSub}>Sign in with your mobile number</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={ON_SURFACE_VARIANT} />
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -525,7 +562,15 @@ const styles = StyleSheet.create({
   },
   methodSection: {
     gap: 12,
-    alignItems: "flex-end",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+  methodPlaceholderText: {
+    fontSize: 15,
+    color: ON_SURFACE_VARIANT,
+    textAlign: "center",
+    opacity: 0.4,
   },
   methodCard: {
     flexDirection: "row",
@@ -540,6 +585,80 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: ON_SURFACE,
+  },
+  // Method drawer
+  methodDrawer: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === "ios" ? 44 : 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  drawerPill: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: OUTLINE_VARIANT,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  methodDrawerBack: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 20,
+    alignSelf: "flex-start",
+  },
+  methodDrawerBackText: {
+    fontSize: 15,
+    color: ON_SURFACE_VARIANT,
+    fontWeight: "500",
+  },
+  methodDrawerTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: ON_SURFACE,
+    fontFamily: "SpaceMono",
+    marginBottom: 6,
+  },
+  methodDrawerSub: {
+    fontSize: 14,
+    color: ON_SURFACE_VARIANT,
+    marginBottom: 24,
+  },
+  methodDrawerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: SURFACE_CONTAINER_LOW,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  methodDrawerIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#F3F0FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  methodDrawerCardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: ON_SURFACE,
+    marginBottom: 2,
+  },
+  methodDrawerCardSub: {
+    fontSize: 13,
+    color: ON_SURFACE_VARIANT,
   },
   dividerContainer: {
     flexDirection: "row",

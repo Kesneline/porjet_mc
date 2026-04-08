@@ -1,0 +1,3 @@
+ok super maintenant je veux que lorsque l'utilisateur choisis de se connecter ou de s'enregistrer isur la page de choix de methode par email/numero ajoutes un bouton de retour vers la page precedente et a la place des bouton que ce soit un drawer qui s'ouvre aussi automatique pour choisir en cliquant soit sur email ou numero
+
+exclusivement lorsque un utilisateur est dans le processus de creation de son compte sur la home page un drawer faisant 85% de la page devra s'ouvrir pour feliciter deja l'utilisateur de s'etre inscrit et lui proposer quelques options comme le choix de langue par swippe, choix du type d'habitation, et les differents budget en fonction du types de meublement et en fcfa

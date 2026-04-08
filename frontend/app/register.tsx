@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useCallback, useEffect } from "react";
 import {
   View,
   Text,
@@ -12,6 +12,8 @@ import {
   Modal,
   TextInput,
   FlatList,
+  ScrollView,
+  TouchableOpacity,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useForm, Controller } from "react-hook-form";
@@ -28,6 +30,27 @@ const OUTLINE_VARIANT = "#c4c4c9";
 
 type RegisterMethod = "email" | "phone" | null;
 type Step = 1 | 2 | 3 | 4 | 5 | 6;
+
+const LANGUAGES = [
+  { code: "fr", label: "Français", flag: "🇫🇷" },
+  { code: "en", label: "English", flag: "🇬🇧" },
+  { code: "es", label: "Español", flag: "🇪🇸" },
+  { code: "ar", label: "العربية", flag: "🇲🇦" },
+  { code: "zh", label: "中文", flag: "🇨🇳" },
+];
+
+const HOUSING_TYPES = [
+  { id: "studio", label: "Studio", icon: "bed-outline" as const, desc: "Compact & independent space" },
+  { id: "chambre", label: "Room", icon: "home-outline" as const, desc: "Shared co-living room" },
+  { id: "appartement", label: "Apartment", icon: "business-outline" as const, desc: "Full apartment" },
+  { id: "villa", label: "Villa", icon: "umbrella-outline" as const, desc: "House or villa" },
+];
+
+const BUDGETS = [
+  { id: "non_meuble", label: "Unfurnished", ranges: ["< 30,000 FCFA", "30,000 – 60,000", "60,000 – 100,000", "> 100,000"] },
+  { id: "semi_meuble", label: "Semi-furnished", ranges: ["< 50,000 FCFA", "50,000 – 90,000", "90,000 – 150,000", "> 150,000"] },
+  { id: "meuble", label: "Fully furnished", ranges: ["< 80,000 FCFA", "80,000 – 130,000", "130,000 – 200,000", "> 200,000"] },
+];
 
 interface Option {
   value: string;
@@ -494,8 +517,59 @@ export default function RegisterScreen() {
   const [selectedUniversity, setSelectedUniversity] = useState<string | null>(null);
   const [activeDrawer, setActiveDrawer] = useState<string | null>(null);
 
+  // Method drawer (step 1)
+  const [showMethodDrawer, setShowMethodDrawer] = useState(false);
+  const methodDrawerAnim = useRef(new Animated.Value(height)).current;
+  const methodBackdropAnim = useRef(new Animated.Value(0)).current;
+
+  // Welcome drawer (after step 6)
+  const [showWelcomeDrawer, setShowWelcomeDrawer] = useState(false);
+  const welcomeDrawerAnim = useRef(new Animated.Value(height)).current;
+  const welcomeBackdropAnim = useRef(new Animated.Value(0)).current;
+  const [selectedLang, setSelectedLang] = useState("fr");
+  const [selectedHousing, setSelectedHousing] = useState<string | null>(null);
+  const [selectedBudgetType, setSelectedBudgetType] = useState("non_meuble");
+  const [selectedBudgetRange, setSelectedBudgetRange] = useState<string | null>(null);
+  const langScrollRef = useRef<ScrollView>(null);
+
   const slideAnim = useRef(new Animated.Value(0)).current;
   const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  // Auto-open method drawer on mount
+  useEffect(() => {
+    const t = setTimeout(() => openMethodDrawer(), 120);
+    return () => clearTimeout(t);
+  }, []);
+
+  const openMethodDrawer = () => {
+    setShowMethodDrawer(true);
+    Animated.parallel([
+      Animated.spring(methodDrawerAnim, { toValue: 0, damping: 20, stiffness: 150, useNativeDriver: true }),
+      Animated.timing(methodBackdropAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const closeMethodDrawer = (cb?: () => void) => {
+    Animated.parallel([
+      Animated.timing(methodDrawerAnim, { toValue: height, duration: 280, useNativeDriver: true }),
+      Animated.timing(methodBackdropAnim, { toValue: 0, duration: 220, useNativeDriver: true }),
+    ]).start(() => { setShowMethodDrawer(false); cb && cb(); });
+  };
+
+  const openWelcomeDrawer = () => {
+    setShowWelcomeDrawer(true);
+    Animated.parallel([
+      Animated.spring(welcomeDrawerAnim, { toValue: 0, damping: 18, stiffness: 120, useNativeDriver: true }),
+      Animated.timing(welcomeBackdropAnim, { toValue: 1, duration: 350, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const closeWelcomeDrawer = () => {
+    Animated.parallel([
+      Animated.timing(welcomeDrawerAnim, { toValue: height, duration: 300, useNativeDriver: true }),
+      Animated.timing(welcomeBackdropAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]).start(() => { setShowWelcomeDrawer(false); router.replace("/(tabs)"); });
+  };
 
   const nameForm = useForm<{ fullName: string }>({ defaultValues: { fullName: "" } });
   const emailForm = useForm<{ email: string }>({ defaultValues: { email: "" } });
@@ -535,8 +609,10 @@ export default function RegisterScreen() {
   };
 
   const handleMethodSelect = (selected: RegisterMethod) => {
-    setMethod(selected);
-    animateToNext(() => setStep(2));
+    closeMethodDrawer(() => {
+      setMethod(selected);
+      animateToNext(() => setStep(2));
+    });
   };
 
   const handleNameSubmit = () => nameForm.handleSubmit(() => animateToNext(() => setStep(3)))();
@@ -571,12 +647,17 @@ export default function RegisterScreen() {
       ville: selectedVille,
       university: selectedUniversity,
     });
-    router.replace("/(tabs)");
+    // Show welcome drawer instead of navigating directly
+    setTimeout(() => openWelcomeDrawer(), 200);
   };
 
   const handleBack = () => {
-    if (step === 1) router.back();
-    else animateToPrev(() => setStep((step - 1) as Step));
+    if (step === 1) {
+      // Re-open method drawer instead of going back
+      openMethodDrawer();
+    } else {
+      animateToPrev(() => setStep((step - 1) as Step));
+    }
   };
 
   const getStepTitle = () => {
@@ -639,6 +720,8 @@ export default function RegisterScreen() {
     );
   };
 
+  const currentBudgetObj = BUDGETS.find(b => b.id === selectedBudgetType);
+
   return (
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === "ios" ? "padding" : "height"}>
       <StatusBar barStyle="dark-content" />
@@ -647,7 +730,9 @@ export default function RegisterScreen() {
         <View style={[styles.progressFill, { width: `${(step / 6) * 100}%` }]} />
       </View>
 
-      <View style={styles.header} />
+      <View style={styles.header}>
+        {/* Top back button removed as requested */}
+      </View>
 
       <Animated.View style={[styles.content, { transform: [{ translateX: slideAnim }], opacity: opacityAnim }]}>
         <View style={styles.titleSection}>
@@ -657,16 +742,7 @@ export default function RegisterScreen() {
 
         {step === 1 && (
           <View style={styles.methodSection}>
-            <Pressable onPress={() => handleMethodSelect("email")} style={({ pressed }) => [styles.methodCard, { opacity: pressed ? 0.85 : 1 }]}>
-              <Ionicons name="mail-outline" size={20} color={PRIMARY} />
-              <Text style={styles.methodTitle}>Email</Text>
-              <Ionicons name="arrow-forward" size={18} color={ON_SURFACE_VARIANT} />
-            </Pressable>
-            <Pressable onPress={() => handleMethodSelect("phone")} style={({ pressed }) => [styles.methodCard, { opacity: pressed ? 0.85 : 1 }]}>
-              <Ionicons name="call-outline" size={20} color={PRIMARY} />
-              <Text style={styles.methodTitle}>Phone Number</Text>
-              <Ionicons name="arrow-forward" size={18} color={ON_SURFACE_VARIANT} />
-            </Pressable>
+            <Text style={styles.methodPlaceholderText}>Tap a method below to continue</Text>
           </View>
         )}
 
@@ -833,7 +909,6 @@ export default function RegisterScreen() {
         onSelect={(val) => { setSelectedRegion(val); setSelectedVille(null); setSelectedUniversity(null); }}
         onClose={() => setActiveDrawer(null)}
       />
-
       <BottomDrawer
         visible={activeDrawer === "city"}
         title="Select City"
@@ -842,7 +917,6 @@ export default function RegisterScreen() {
         onSelect={(val) => { setSelectedVille(val); setSelectedUniversity(null); }}
         onClose={() => setActiveDrawer(null)}
       />
-
       <BottomDrawer
         visible={activeDrawer === "university"}
         title="Select University"
@@ -851,6 +925,134 @@ export default function RegisterScreen() {
         onSelect={(val) => { setSelectedUniversity(val); }}
         onClose={() => setActiveDrawer(null)}
       />
+
+      {/* ── METHOD DRAWER (auto-open on step 1) ── */}
+      <Modal visible={showMethodDrawer} transparent animationType="none" statusBarTranslucent>
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.45)", opacity: methodBackdropAnim }]}>
+            <Pressable style={StyleSheet.absoluteFill} onPress={() => closeMethodDrawer(() => router.back())} />
+          </Animated.View>
+          <Animated.View style={[styles.methodDrawer, { transform: [{ translateY: methodDrawerAnim }] }]}>
+            <View style={styles.drawerPill} />
+            {/* Back button */}
+            <Pressable onPress={() => closeMethodDrawer(() => router.back())} hitSlop={12}
+              style={styles.methodDrawerBack}>
+              <Ionicons name="arrow-back" size={20} color={ON_SURFACE_VARIANT} />
+              <Text style={styles.methodDrawerBackText}>Back</Text>
+            </Pressable>
+            <Text style={styles.methodDrawerTitle}>Create your account</Text>
+            <Text style={styles.methodDrawerSub}>Choose your registration method</Text>
+            <Pressable onPress={() => handleMethodSelect("email")}
+              style={({ pressed }) => [styles.methodDrawerCard, { opacity: pressed ? 0.82 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+              <View style={styles.methodDrawerIconWrap}>
+                <Ionicons name="mail-outline" size={22} color={PRIMARY} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.methodDrawerCardTitle}>Email Address</Text>
+                <Text style={styles.methodDrawerCardSub}>Register with your email</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={ON_SURFACE_VARIANT} />
+            </Pressable>
+            <Pressable onPress={() => handleMethodSelect("phone")}
+              style={({ pressed }) => [styles.methodDrawerCard, { opacity: pressed ? 0.82 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}>
+              <View style={styles.methodDrawerIconWrap}>
+                <Ionicons name="call-outline" size={22} color={PRIMARY} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.methodDrawerCardTitle}>Phone Number</Text>
+                <Text style={styles.methodDrawerCardSub}>Register with your mobile number</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={18} color={ON_SURFACE_VARIANT} />
+            </Pressable>
+          </Animated.View>
+        </View>
+      </Modal>
+
+      {/* ── WELCOME DRAWER (after step 6) ── */}
+      <Modal visible={showWelcomeDrawer} transparent animationType="none" statusBarTranslucent>
+        <View style={{ flex: 1, justifyContent: "flex-end" }}>
+          <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.55)", opacity: welcomeBackdropAnim }]} />
+          <Animated.View style={[styles.welcomeDrawer, { transform: [{ translateY: welcomeDrawerAnim }] }]}>
+            <View style={styles.drawerPill} />
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 40 }}>
+              {/* Header */}
+              <View style={styles.welcomeHeader}>
+                <Text style={styles.welcomeTitle}>Welcome aboard!</Text>
+                <Text style={styles.welcomeSubtitle}>
+                  Your account is ready. Personalize your experience.
+                </Text>
+              </View>
+
+              {/* Language swipe */}
+              <Text style={styles.sectionLabel}>Preferred Language</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.langScrollContent}>
+                {LANGUAGES.map(lang => (
+                  <Pressable key={lang.code} onPress={() => setSelectedLang(lang.code)}
+                    style={[styles.langChip, selectedLang === lang.code && styles.langChipActive]}>
+                    <Text style={styles.langFlag}>{lang.flag}</Text>
+                    <Text style={[styles.langLabel, selectedLang === lang.code && styles.langLabelActive]}>
+                      {lang.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+
+              {/* Housing type */}
+              <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Housing Type</Text>
+              <View style={styles.housingGrid}>
+                {HOUSING_TYPES.map(h => (
+                  <Pressable key={h.id} onPress={() => setSelectedHousing(h.id)}
+                    style={[styles.housingCard, selectedHousing === h.id && styles.housingCardActive]}>
+                    <Ionicons name={h.icon} size={26}
+                      color={selectedHousing === h.id ? "#ffffff" : PRIMARY} />
+                    <Text style={[styles.housingLabel, selectedHousing === h.id && styles.housingLabelActive]}>
+                      {h.label}
+                    </Text>
+                    <Text style={[styles.housingDesc, selectedHousing === h.id && styles.housingDescActive]}>
+                      {h.desc}
+                    </Text>
+                  </Pressable>
+                ))}
+              </View>
+
+              {/* Budget */}
+              <Text style={[styles.sectionLabel, { marginTop: 24 }]}>Monthly Budget (FCFA)</Text>
+              {/* Furnishing tabs */}
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.budgetTabsContent}>
+                {BUDGETS.map(b => (
+                  <Pressable key={b.id} onPress={() => { setSelectedBudgetType(b.id); setSelectedBudgetRange(null); }}
+                    style={[styles.budgetTab, selectedBudgetType === b.id && styles.budgetTabActive]}>
+                    <Text style={[styles.budgetTabText, selectedBudgetType === b.id && styles.budgetTabTextActive]}>
+                      {b.label}
+                    </Text>
+                  </Pressable>
+                ))}
+              </ScrollView>
+              <View style={styles.budgetRanges}>
+                {currentBudgetObj?.ranges.map(r => (
+                  <Pressable key={r} onPress={() => setSelectedBudgetRange(r)}
+                    style={[styles.budgetRange, selectedBudgetRange === r && styles.budgetRangeActive]}>
+                    <Text style={[styles.budgetRangeText, selectedBudgetRange === r && styles.budgetRangeTextActive]}>
+                      {r}
+                    </Text>
+                    {selectedBudgetRange === r && (
+                      <Ionicons name="checkmark-circle" size={18} color={PRIMARY} />
+                    )}
+                  </Pressable>
+                ))}
+              </View>
+
+              {/* CTA */}
+              <Pressable onPress={closeWelcomeDrawer}
+                style={({ pressed }) => [styles.welcomeCTA, { opacity: pressed ? 0.85 : 1, transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
+                <Text style={styles.welcomeCTAText}>Start Exploring</Text>
+              </Pressable>
+            </ScrollView>
+          </Animated.View>
+        </View>
+      </Modal>
     </KeyboardAvoidingView>
   );
 }
@@ -879,6 +1081,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: Platform.OS === "ios" ? 60 : 40,
     paddingBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  topBackButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: SURFACE_CONTAINER_LOW,
+    justifyContent: "center",
+    alignItems: "center",
   },
   content: {
     flex: 1,
@@ -903,7 +1115,15 @@ const styles = StyleSheet.create({
   },
   methodSection: {
     gap: 12,
-    alignItems: "flex-end",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+  },
+  methodPlaceholderText: {
+    fontSize: 15,
+    color: ON_SURFACE_VARIANT,
+    textAlign: "center",
+    opacity: 0.5,
   },
   methodCard: {
     flexDirection: "row",
@@ -918,6 +1138,252 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "600",
     color: ON_SURFACE,
+  },
+  // Method drawer styles
+  methodDrawer: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    paddingBottom: Platform.OS === "ios" ? 44 : 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 20,
+    elevation: 20,
+  },
+  drawerPill: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: OUTLINE_VARIANT,
+    alignSelf: "center",
+    marginBottom: 16,
+  },
+  methodDrawerBack: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 20,
+    alignSelf: "flex-start",
+  },
+  methodDrawerBackText: {
+    fontSize: 15,
+    color: ON_SURFACE_VARIANT,
+    fontWeight: "500",
+  },
+  methodDrawerTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: ON_SURFACE,
+    fontFamily: "SpaceMono",
+    marginBottom: 6,
+  },
+  methodDrawerSub: {
+    fontSize: 14,
+    color: ON_SURFACE_VARIANT,
+    marginBottom: 24,
+  },
+  methodDrawerCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 14,
+    backgroundColor: SURFACE_CONTAINER_LOW,
+    paddingVertical: 16,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  methodDrawerIconWrap: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: "#F3F0FF",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  methodDrawerCardTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: ON_SURFACE,
+    marginBottom: 2,
+  },
+  methodDrawerCardSub: {
+    fontSize: 13,
+    color: ON_SURFACE_VARIANT,
+  },
+  // Welcome drawer styles
+  welcomeDrawer: {
+    backgroundColor: "#ffffff",
+    borderTopLeftRadius: 32,
+    borderTopRightRadius: 32,
+    height: height * 0.85,
+    paddingHorizontal: 24,
+    paddingTop: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    elevation: 24,
+  },
+  welcomeHeader: {
+    alignItems: "center",
+    paddingVertical: 24,
+  },
+  welcomeTitle: {
+    fontSize: 30,
+    fontWeight: "800",
+    color: ON_SURFACE,
+    fontFamily: "SpaceMono",
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  welcomeSubtitle: {
+    fontSize: 15,
+    color: ON_SURFACE_VARIANT,
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  sectionLabel: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: ON_SURFACE,
+    letterSpacing: 0.3,
+    marginBottom: 12,
+  },
+  // Language
+  langScrollContent: {
+    gap: 10,
+    paddingRight: 8,
+  },
+  langChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 40,
+    backgroundColor: SURFACE_CONTAINER_LOW,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  langChipActive: {
+    backgroundColor: "#F3F0FF",
+    borderColor: PRIMARY,
+  },
+  langFlag: {
+    fontSize: 18,
+  },
+  langLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: ON_SURFACE_VARIANT,
+  },
+  langLabelActive: {
+    color: PRIMARY,
+  },
+  // Housing
+  housingGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 10,
+  },
+  housingCard: {
+    width: (width - 48 - 10) / 2,
+    backgroundColor: SURFACE_CONTAINER_LOW,
+    borderRadius: 18,
+    padding: 16,
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  housingCardActive: {
+    backgroundColor: PRIMARY,
+    borderColor: PRIMARY,
+  },
+  housingLabel: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: ON_SURFACE,
+  },
+  housingLabelActive: {
+    color: "#ffffff",
+  },
+  housingDesc: {
+    fontSize: 12,
+    color: ON_SURFACE_VARIANT,
+    lineHeight: 17,
+  },
+  housingDescActive: {
+    color: "rgba(255,255,255,0.8)",
+  },
+  // Budget
+  budgetTabsContent: {
+    gap: 8,
+    paddingRight: 8,
+    marginBottom: 12,
+  },
+  budgetTab: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    borderRadius: 40,
+    backgroundColor: SURFACE_CONTAINER_LOW,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  budgetTabActive: {
+    backgroundColor: "#F3F0FF",
+    borderColor: PRIMARY,
+  },
+  budgetTabText: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: ON_SURFACE_VARIANT,
+  },
+  budgetTabTextActive: {
+    color: PRIMARY,
+  },
+  budgetRanges: {
+    gap: 8,
+  },
+  budgetRange: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: SURFACE_CONTAINER_LOW,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: "transparent",
+  },
+  budgetRangeActive: {
+    backgroundColor: "#F3F0FF",
+    borderColor: PRIMARY,
+  },
+  budgetRangeText: {
+    fontSize: 15,
+    fontWeight: "500",
+    color: ON_SURFACE,
+  },
+  budgetRangeTextActive: {
+    color: PRIMARY,
+    fontWeight: "700",
+  },
+  // CTA
+  welcomeCTA: {
+    marginTop: 28,
+    backgroundColor: PRIMARY,
+    paddingVertical: 18,
+    borderRadius: 9999,
+    alignItems: "center",
+  },
+  welcomeCTAText: {
+    fontSize: 17,
+    fontWeight: "700",
+    color: "#ffffff",
+    letterSpacing: 0.3,
   },
   inputSection: {
     gap: 16,
