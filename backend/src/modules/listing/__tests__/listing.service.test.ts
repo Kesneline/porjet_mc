@@ -67,6 +67,7 @@ describe('ListingService', () => {
           type: 'STUDIO',
         },
         'user-123',
+        'OWNER',
         []
       );
 
@@ -88,6 +89,7 @@ describe('ListingService', () => {
       const result = await ListingService.createListing(
         { title: 'Apartment', description: 'Nice apartment', address: '456 Baker St', city: 'London', price: 800, latitude: 51.5074, longitude: -0.1278, type: 'APPARTEMENT' },
         'owner-789',
+        'OWNER',
         []
       );
 
@@ -117,7 +119,7 @@ describe('ListingService', () => {
       (prisma.listing.findMany as jest.Mock).mockResolvedValueOnce(mockListings);
       (prisma.listing.count as jest.Mock).mockResolvedValueOnce(50);
 
-      const result = await ListingService.getAllListings();
+      const result = await ListingService.getAllListings({});
 
       expect(result.listings).toHaveLength(2);
       expect(result.pagination.total).toBe(50);
@@ -129,11 +131,11 @@ describe('ListingService', () => {
       (prisma.listing.findMany as jest.Mock).mockResolvedValueOnce([]);
       (prisma.listing.count as jest.Mock).mockResolvedValueOnce(0);
 
-      await ListingService.getAllListings();
+      await ListingService.getAllListings({});
 
       expect(prisma.listing.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
-          where: { status: 'ACTIVE' },
+          where: expect.objectContaining({ status: 'ACTIVE' }),
         })
       );
     });
@@ -142,7 +144,7 @@ describe('ListingService', () => {
       (prisma.listing.findMany as jest.Mock).mockResolvedValueOnce([]);
       (prisma.listing.count as jest.Mock).mockResolvedValueOnce(100);
 
-      const result = await ListingService.getAllListings(3, 25);
+      const result = await ListingService.getAllListings({ page: 3, limit: 25 });
 
       // Page 3 with limit 25: skip = (3-1)*25 = 50
       expect(prisma.listing.findMany).toHaveBeenCalledWith(
